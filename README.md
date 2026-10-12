@@ -13,9 +13,22 @@
 
 - 🔐 **三级权限体系**：RBAC 权限码模型，粒度到接口（`@RequirePermissions`）、按钮（前端 `v-auth`）、数据行（`@DataScope` 部门树/本人/自定义范围）；前后端共用同一套权限码，角色改权限**无需重新登录**即时生效（Redis 精准失效）
 - 🤖 **AI 基础设施**：`ILlmProvider` 抽象层，一套代码切 mock / openai / deepseek / qwen / zhipu / moonshot / mimo / ollama；主模型失败自动降级备用模型；SSE 流式输出（客户端断开级联取消）；每次调用落 `ai_call_log` 审计（token 用量、成本、traceId 串联）
+- 🧩 **模型配置化（参考 CC Switch）**：供应商/模型全部数据库驱动——「模型配置」页可视化增删改厂商（名称/协议格式/端点/API Key/启停）、模型（最大输出/上下文窗口/默认模型），支持从端点自动拉取模型列表（`/v1/models`、Ollama `/api/tags`）；保存即时生效，env 仅作首次引导兜底
+- 🛠️ **Function Calling 工具调用 Agent**：AI 对话自动识别意图并调用真实系统工具（系统概览、搜索用户、**创建用户**、分配角色、查询角色/部门/权限点、**配置角色权限**、AI 用量），工具执行走真实权限码门控，写操作完成后发权限失效事件——对话里就能「查用户数、添加员工、配权限」
+- 💬 **Open WebUI 风格对话**：会话侧栏（分组/搜索/重命名/删除）、Markdown + 代码高亮复制、消息编辑/重新生成/复制、模型选择器、快捷回复、打字指示、停止生成、快捷键（`Ctrl+Shift+O` 新对话 / `Ctrl+K` 搜索 / `Esc` 停止）；全局悬浮助手「米答」随时唤起
+- 📊 **真实数据驾驶舱**：工作台（系统资源计数 + AI 用量指标 + 14 天趋势 + 最近调用）、用量报表（ECharts：KPI/趋势/Token 占比环图/模型与厂商柱状 + 明细表）全部由真实接口驱动，零 mock
+- 🔔 **站内通知**：`sys_notification` 表 + 按用户隔离的通知接口，铃铛未读角标、单条/全部已读、清空已读；系统事件自动生成通知（如 AI 调用失败）
 - 🧱 **统一横切**：统一响应包 `{code, message, data, traceId, timestamp}`、全局异常兜底（Prisma 错误归一化）、AsyncLocalStorage 全链路 traceId、结构化日志（pino）
 - 🛡️ **安全默认**：JWT 双 Token（旋转 + 单点踢人）、argon2 密码哈希、登录限流、helmet、DTO 白名单校验、配置 Joi 启动校验（Fail Fast）
 - 🧰 **工程化**：ESLint 9 + Prettier + Stylelint、husky + lint-staged + commitlint、madge 循环依赖检查、Swagger（生产自动关闭）、Docker 多阶段构建、VS Code 四配置断点调试
+
+## 页面预览
+
+| 工作台（真实数据驾驶舱）                      | AI 问答（工具调用 Agent）                    |
+| --------------------------------------------- | -------------------------------------------- |
+| ![工作台](./docs/screenshots/dashboard.png)   | ![AI 问答](./docs/screenshots/ai-chat.png)   |
+| **模型配置（CC Switch 式）**                  | **用量报表（ECharts）**                      |
+| ![模型配置](./docs/screenshots/ai-config.png) | ![用量报表](./docs/screenshots/ai-usage.png) |
 
 ## 架构
 
@@ -59,7 +72,7 @@ docker compose up -d
 
 # 3. 初始化数据库（迁移 + 种子数据）
 pnpm prisma:migrate      # 首次执行（自动加载 .env.development）
-pnpm prisma:seed         # 初始化权限树 + admin/demo 账号
+pnpm prisma:seed         # 初始化权限树 + admin/demo 账号 + 通知/模型配置样本
 
 # 4. 启动后端（或 VS Code 按 F5 断点调试）
 pnpm dev
@@ -99,7 +112,7 @@ src/
 ├── config/        # 配置中心（Joi 启动校验）
 ├── infra/         # 基础设施：prisma / redis / logger / ai（Provider 抽象）
 ├── shared/        # 横切能力：守卫 / 拦截器 / 过滤器 / 装饰器 / 常量 / 缓存服务
-└── modules/       # 业务模块：auth / system(用户·角色·权限·部门) / ai-chat / health
+└── modules/       # 业务模块：auth / system(用户·角色·权限·部门) / ai-chat(对话+工具调用) / ai-config(模型配置) / dashboard / notification / health
 web/               # Vue3 管理端（art-design-pro：api / views / components / hooks）
 prisma/            # schema + 迁移 + seed（权限树初始化）
 docs/              # 架构设计方案
@@ -139,7 +152,9 @@ create(@Body() dto: CreateUserDto) { ... }
 
 ## AI 使用指南
 
-### 切换厂商（只改 .env，零代码改动）
+### 模型配置（页面可视化，数据库驱动）
+
+登录后在 **AI 应用 → 模型配置** 增删改供应商与模型（协议格式 OpenAI 兼容 / Ollama 可选，模型可设最大输出与上下文窗口），保存即时生效、无需重启；也支持一键从端点拉取模型列表。`seed` 会把 `.env` 的 `AI_PROVIDER / AI_MODEL` 引导为首个供应商配置，env 仅在数据库无配置时兜底：
 
 ```bash
 AI_PROVIDER=deepseek
@@ -148,7 +163,7 @@ AI_MODEL=deepseek-chat
 AI_FALLBACK_MODEL=deepseek-reasoner   # 主模型失败自动降级
 ```
 
-已内置：`mock`（本地模拟）、`openai`、`deepseek`、`qwen`（通义）、`zhipu`（智谱）、`moonshot`、`mimo`（小米 MiMo，本地默认配置）、`ollama`（本地私有化）。
+已内置预设：`mock`（本地模拟）、`openai`、`deepseek`、`qwen`（通义）、`zhipu`（智谱）、`moonshot`、`mimo`（小米 MiMo，本地默认配置）、`ollama`（本地私有化）。
 
 > 本地开发默认使用小米 MiMo：`AI_PROVIDER=mimo`，主模型 `mimo-v2.6-flash`、备用 `mimo-v2.6-pro`（MiMo 为推理模型，回答前会有思考过程，max_tokens 建议 ≥1024；该厂商暂无 embedding 接口）。
 > 配置真实厂商后可用 `pnpm test:ai:smoke` 做真实链路冒烟（chat / 流式 / embedding 三项，不进 CI）。
@@ -164,7 +179,20 @@ for await (const delta of this.ai.chatStream(userId, { messages })) {
 
 每次调用自动落 `ai_call_log`（traceId 关联请求日志、token 用量、成本估算）；管理端报表：`GET /api/v1/ai/usage`。
 
-流式接口：`POST /api/v1/ai/chat/stream`，帧格式 `{"delta":"...","done":false}`，结束帧 `done:true` 附带 `usage`。方法为 POST，请用 fetch 流式消费（`EventSource` 仅支持 GET）。
+流式接口：`POST /api/v1/ai/chat/stream`，帧格式：
+
+- `{"delta":"...","done":false}` — 增量文本；
+- `{"tool":{"name":"search_users","status":"running"}}` — Agent 工具活动；
+- `{"done":true,"usage":{...},"model":"..."}` — 结束帧。
+
+方法为 POST，请用 fetch 流式消费（`EventSource` 仅支持 GET）。
+
+### 工具调用 Agent（AI 操作真实系统）
+
+对话接口内置工具调用循环：模型自动识别意图 → 调用工具（带当前用户权限码门控）→ 结果回喂 → 流式给出最终答案。内置工具：`get_system_overview` / `search_users` / `create_user` / `assign_user_roles` / `list_roles` / `get_dept_tree` / `list_permissions` / `set_role_permissions` / `get_ai_usage`。扩展新工具只需在 `src/modules/ai-chat/ai-tools.service.ts` 增加一个 spec（声明所需权限码 + handler）；Prompt 模板位于 `src/infra/ai/prompts/`。示例：
+
+> 用户：帮我查一下现在有多少用户 → 模型调用 `get_system_overview` → 返回真实数字
+> 用户：添加员工张三 → 模型确认后调用 `create_user` → 返回账号与初始密码
 
 ## 调试
 

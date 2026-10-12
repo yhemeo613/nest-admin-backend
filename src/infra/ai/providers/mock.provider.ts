@@ -16,7 +16,7 @@ export class MockLlmProvider implements ILlmProvider {
 
   chat(params: ChatParams): Promise<ChatResult> {
     const content = this.buildContent(params);
-    const promptTokens = params.messages.reduce((sum, m) => sum + m.content.length, 0);
+    const promptTokens = params.messages.reduce((sum, m) => sum + (m.content ?? '').length, 0);
     return Promise.resolve({
       content,
       usage: {
@@ -35,7 +35,7 @@ export class MockLlmProvider implements ILlmProvider {
     for (let i = 0; i < content.length; i += chunkSize) {
       yield { delta: content.slice(i, i + chunkSize), done: false };
     }
-    const promptTokens = params.messages.reduce((sum, m) => sum + m.content.length, 0);
+    const promptTokens = params.messages.reduce((sum, m) => sum + (m.content ?? '').length, 0);
     yield {
       delta: '',
       done: true,

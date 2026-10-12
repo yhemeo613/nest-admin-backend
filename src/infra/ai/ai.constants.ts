@@ -1,7 +1,31 @@
 /** AI 基础设施常量 */
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 
-/** 各厂商 OpenAI 兼容协议的默认接入地址 */
+/** 上游协议格式（供应商级配置，可扩展；对应 CC Switch 的「上游格式」概念） */
+export const AiProtocol = {
+  /** OpenAI 兼容 Chat Completions（覆盖 OpenAI/DeepSeek/千问/智谱/Kimi/MiMo 等） */
+  OPENAI_COMPAT: 'OPENAI_COMPAT',
+  /** Ollama 原生 API（本地/私有化） */
+  OLLAMA: 'OLLAMA',
+} as const;
+
+export type AiProtocolValue = (typeof AiProtocol)[keyof typeof AiProtocol];
+
+export const AI_PROTOCOL_VALUES: string[] = Object.values(AiProtocol);
+
+/** 预设厂商展示名（seed 引导与前端预设用；运行时以数据库配置为准） */
+export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  openai: 'OpenAI',
+  deepseek: 'DeepSeek',
+  qwen: '通义千问',
+  zhipu: '智谱 AI',
+  moonshot: 'Moonshot Kimi',
+  mimo: 'Xiaomi MiMo',
+  ollama: 'Ollama（本地）',
+  mock: 'Mock（测试）',
+};
+
+/** 各厂商 OpenAI 兼容协议的默认接入地址（预设填充用；运行时以数据库配置为准） */
 export const PROVIDER_BASE_URLS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
   deepseek: 'https://api.deepseek.com/v1',

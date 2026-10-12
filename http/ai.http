@@ -21,6 +21,84 @@ Accept: text/event-stream
   "message": "给我讲一个简短的故事"
 }
 
+### AI 对话（SSE 流式，指定模型配置 ID）
+POST {{host}}/ai/chat/stream
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "message": "用一句话介绍你自己",
+  "modelId": "seed-ai-model-default"
+}
+
 ### AI 用量汇总（需要 ai:usage:list 权限）
 GET {{host}}/ai/usage
+Authorization: Bearer {{accessToken}}
+
+### 供应商配置列表（需要 ai:config:list 权限，apiKey 掩码返回）
+GET {{host}}/ai/providers
+Authorization: Bearer {{accessToken}}
+
+### 新增供应商（需要 ai:config:create 权限，可携带模型列表）
+POST {{host}}/ai/providers
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "DeepSeek",
+  "protocol": "OPENAI_COMPAT",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "apiKey": "sk-xxxx",
+  "remark": "http 用例",
+  "models": [
+    {
+      "name": "deepseek-chat",
+      "label": "DeepSeek V3",
+      "maxOutput": 8192,
+      "contextWindow": 65536,
+      "isDefault": false
+    }
+  ]
+}
+
+### 修改供应商（需要 ai:config:update 权限；apiKey 缺省保留原值，models 整体替换）
+PUT {{host}}/ai/providers/some-provider-id
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "DeepSeek",
+  "protocol": "OPENAI_COMPAT",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "remark": "改用 deepseek-reasoner",
+  "models": [
+    {
+      "name": "deepseek-reasoner",
+      "label": "R1",
+      "maxOutput": 8192,
+      "contextWindow": 65536,
+      "enabled": true,
+      "isDefault": true
+    }
+  ]
+}
+
+### 删除供应商（软删除，需要 ai:config:delete 权限）
+DELETE {{host}}/ai/providers/some-provider-id
+Authorization: Bearer {{accessToken}}
+
+### 从端点自动发现模型列表（OpenAI 兼容 /models；限流 10 次/分钟）
+POST {{host}}/ai/providers/fetch-models
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "baseUrl": "https://api.deepseek.com/v1",
+  "apiKey": "sk-xxxx",
+  "protocol": "OPENAI_COMPAT"
+}
+
+### 对话页可用模型列表（需要 ai:chat:ask 权限，含全局默认模型）
+GET {{host}}/ai/models
 Authorization: Bearer {{accessToken}}

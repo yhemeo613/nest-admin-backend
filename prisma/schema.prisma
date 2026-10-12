@@ -171,3 +171,62 @@ model AiCallLog {
   @@index([createdAt])
   @@map("ai_call_log")
 }
+
+// ==================== AI 供应商/模型配置（用户可自定义，参考 CC Switch） ====================
+
+model AiProvider {
+  id        String    @id @default(uuid())
+  name      String
+  protocol  String // OPENAI_COMPAT / OLLAMA（上游协议格式，可扩展）
+  baseUrl   String    @map("base_url")
+  apiKey    String?   @map("api_key")
+  remark    String?
+  enabled   Boolean   @default(true)
+  sort      Int       @default(0)
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  models AiModel[]
+
+  @@map("ai_provider")
+}
+
+model AiModel {
+  id            String   @id @default(uuid())
+  providerId    String   @map("provider_id")
+  name          String // 模型 ID（请求上游时使用）
+  label         String? // 显示名
+  maxOutput     Int?     @map("max_output") // 最大输出 tokens（覆盖全局 AI_MAX_TOKENS）
+  contextWindow Int?     @map("context_window") // 上下文窗口 tokens（仅展示/提示用）
+  enabled       Boolean  @default(true)
+  isDefault     Boolean  @default(false) @map("is_default")
+  sort          Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  provider AiProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("ai_model")
+}
+
+// ==================== 站内通知（真实接口驱动） ====================
+
+model SysNotification {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id") // 接收者
+  type      String // NOTICE 系统通知 / MESSAGE 消息 / TODO 待办
+  title     String
+  content   String?   @map("content")
+  link      String?   @map("link") // 可选跳转路由
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+  @@map("sys_notification")
+}

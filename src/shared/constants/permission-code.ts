@@ -36,6 +36,12 @@ export const PermissionCode = {
   AiDocUpload: 'ai:doc:upload',
   AiDocDelete: 'ai:doc:delete',
   AiUsageList: 'ai:usage:list',
+  // AI 模型配置（供应商/模型自定义）
+  AiConfigMenu: 'ai:config',
+  AiConfigList: 'ai:config:list',
+  AiConfigCreate: 'ai:config:create',
+  AiConfigUpdate: 'ai:config:update',
+  AiConfigDelete: 'ai:config:delete',
 } as const;
 
 export type PermissionCodeValue = (typeof PermissionCode)[keyof typeof PermissionCode];

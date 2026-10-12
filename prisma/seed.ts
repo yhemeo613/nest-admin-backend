@@ -2,6 +2,11 @@ import { DataScope, PermType, PrismaClient, Status } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { config as loadEnv } from 'dotenv';
 
+import {
+  AiProtocol,
+  PROVIDER_BASE_URLS,
+  PROVIDER_DISPLAY_NAMES,
+} from '../src/infra/ai/ai.constants';
 // 与 src/shared/constants/permission-code.ts 保持一致（单一事实来源是代码常量）
 import { PermissionCode } from '../src/shared/constants/permission-code';
 
@@ -46,7 +51,6 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.MENU,
     parentCode: 'system',
     path: '/system/user',
-    icon: 'ri:user-line',
     sort: 1,
   },
   {
@@ -91,7 +95,6 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.MENU,
     parentCode: 'system',
     path: '/system/role',
-    icon: 'ri:shield-user-line',
     sort: 2,
   },
   {
@@ -130,7 +133,6 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.MENU,
     parentCode: 'system',
     path: '/system/menu',
-    icon: 'ri:lock-line',
     sort: 3,
   },
   {
@@ -163,7 +165,6 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.MENU,
     parentCode: 'system',
     path: '/system/dept',
-    icon: 'ri:organization-chart',
     sort: 4,
   },
   {
@@ -205,7 +206,6 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.MENU,
     parentCode: 'ai',
     path: '/ai/chat',
-    icon: 'ri:chat-3-line',
     sort: 1,
   },
   {
@@ -226,7 +226,6 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.MENU,
     parentCode: 'ai',
     path: '/ai/usage',
-    icon: 'ri:bar-chart-2-line',
     sort: 3,
   },
   {
@@ -234,6 +233,39 @@ const PERMISSION_TREE: PermSeed[] = [
     code: PermissionCode.AiUsageList,
     type: PermType.BUTTON,
     parentCode: 'ai:usage',
+  },
+  // ---------- AI 模型配置（供应商/模型自定义） ----------
+  {
+    name: '模型配置',
+    code: PermissionCode.AiConfigMenu,
+    type: PermType.MENU,
+    parentCode: 'ai',
+    path: '/ai/config',
+    sort: 2,
+  },
+  {
+    name: '配置查询',
+    code: PermissionCode.AiConfigList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.AiConfigMenu,
+  },
+  {
+    name: '配置新增',
+    code: PermissionCode.AiConfigCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.AiConfigMenu,
+  },
+  {
+    name: '配置修改',
+    code: PermissionCode.AiConfigUpdate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.AiConfigMenu,
+  },
+  {
+    name: '配置删除',
+    code: PermissionCode.AiConfigDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.AiConfigMenu,
   },
 ];
 
@@ -247,7 +279,8 @@ async function seedPermissions(): Promise<Map<string, string>> {
         name: node.name,
         type: node.type,
         path: node.path,
-        icon: node.icon,
+        // ?? null：Prisma 会跳过 undefined，显式 null 才能清掉旧库里残留的图标
+        icon: node.icon ?? null,
         sort: node.sort ?? 0,
       },
       create: {
@@ -255,7 +288,7 @@ async function seedPermissions(): Promise<Map<string, string>> {
         code: node.code,
         type: node.type,
         path: node.path,
-        icon: node.icon,
+        icon: node.icon ?? null,
         sort: node.sort ?? 0,
       },
     });
@@ -364,6 +397,133 @@ async function seedUsers(rootDeptId: string): Promise<void> {
   });
 }
 
+/**
+ * 从 env 引导创建默认供应商与模型（幂等，固定 ID）。
+ * 数据库配置优先于 env：创建后可在「模型配置」页自由增删改，env 仅作初始值。
+ */
+async function seedAiProvider(): Promise<void> {
+  const providerKey = process.env.AI_PROVIDER ?? '';
+  const model = process.env.AI_MODEL ?? '';
+  if (!model || providerKey === 'mock' || !providerKey) return;
+
+  const baseUrl = process.env.AI_BASE_URL || PROVIDER_BASE_URLS[providerKey] || '';
+  if (!baseUrl) return;
+
+  const protocol = providerKey === 'ollama' ? AiProtocol.OLLAMA : AiProtocol.OPENAI_COMPAT;
+  const maxOutput = Number(process.env.AI_MAX_TOKENS) || 2048;
+
+  const provider = await prisma.aiProvider.upsert({
+    where: { id: 'seed-ai-provider-env' },
+    update: {
+      name: PROVIDER_DISPLAY_NAMES[providerKey] ?? providerKey,
+      protocol,
+      baseUrl,
+      // env 有密钥才覆盖，避免部署环境把库里已配置的 Key 清空
+      ...(process.env.AI_API_KEY ? { apiKey: process.env.AI_API_KEY } : {}),
+    },
+    create: {
+      id: 'seed-ai-provider-env',
+      name: PROVIDER_DISPLAY_NAMES[providerKey] ?? providerKey,
+      protocol,
+      baseUrl,
+      apiKey: process.env.AI_API_KEY || null,
+      remark: '由 seed 从 .env 引导创建（AI_PROVIDER / AI_MODEL），可在页面中修改',
+      sort: 0,
+    },
+  });
+
+  await prisma.aiModel.upsert({
+    where: { id: 'seed-ai-model-default' },
+    update: { name: model, maxOutput, isDefault: true },
+    create: {
+      id: 'seed-ai-model-default',
+      providerId: provider.id,
+      name: model,
+      maxOutput,
+      isDefault: true,
+      sort: 0,
+    },
+  });
+
+  const fallback = process.env.AI_FALLBACK_MODEL ?? '';
+  if (fallback && fallback !== model) {
+    await prisma.aiModel.upsert({
+      where: { id: 'seed-ai-model-fallback' },
+      update: { name: fallback, isDefault: false },
+      create: {
+        id: 'seed-ai-model-fallback',
+        providerId: provider.id,
+        name: fallback,
+        maxOutput,
+        isDefault: false,
+        sort: 1,
+      },
+    });
+  }
+}
+
+/**
+ * 站内通知样本（固定 ID 幂等；重复 seed 不覆盖已读状态）。
+ */
+async function seedNotifications(): Promise<void> {
+  const admin = await prisma.sysUser.findUnique({ where: { username: 'admin' } });
+  const demo = await prisma.sysUser.findUnique({ where: { username: 'demo' } });
+  if (!admin || !demo) return;
+
+  const rows = [
+    {
+      id: 'seed-notify-1',
+      userId: admin.id,
+      type: 'NOTICE',
+      title: '欢迎使用权限中枢',
+      content: '系统已就绪：可从左侧菜单进入用户、角色、权限与 AI 模型配置。',
+      link: '/dashboard/console',
+    },
+    {
+      id: 'seed-notify-2',
+      userId: admin.id,
+      type: 'MESSAGE',
+      title: '模型配置已接入',
+      content: '供应商与模型现在可在「模型配置」页自定义，保存后即时生效。',
+      link: '/ai/config',
+    },
+    {
+      id: 'seed-notify-3',
+      userId: admin.id,
+      type: 'TODO',
+      title: '核对近 7 天 AI 成本',
+      content: '（示例待办）到用量报表检查成本是否在预算内。',
+      link: '/ai/usage',
+      readAt: new Date('2026-10-01T00:00:00'),
+    },
+    {
+      id: 'seed-notify-4',
+      userId: demo.id,
+      type: 'NOTICE',
+      title: 'AI 问答已开放',
+      content: '你可以向米答提问了，支持流式输出与多轮对话。',
+      link: '/ai/chat',
+    },
+    {
+      id: 'seed-notify-5',
+      userId: demo.id,
+      type: 'MESSAGE',
+      title: '演示账号说明',
+      content: 'demo 账号仅拥有 AI 对话相关权限。',
+      link: null,
+    },
+  ];
+
+  for (const row of rows) {
+    // update 不带 readAt：重复 seed 不会重置用户已读状态
+    await prisma.sysNotification.upsert({
+      where: { id: row.id },
+      update: { title: row.title, content: row.content, link: row.link, userId: row.userId },
+      create: { ...row, readAt: (row as { readAt?: Date }).readAt ?? null },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   console.log('==> 初始化权限树...');
   const codeToId = await seedPermissions();
@@ -374,6 +534,10 @@ async function main(): Promise<void> {
   await seedRoles([...codeToId.values()]);
   console.log('==> 初始化用户...');
   await seedUsers(rootDeptId);
+  console.log('==> 初始化 AI 供应商配置...');
+  await seedAiProvider();
+  console.log('==> 初始化站内通知样本...');
+  await seedNotifications();
   console.log('==> 完成。内置账号：admin/Admin@123（超管）、demo/Demo@123（普通用户）');
 }
 

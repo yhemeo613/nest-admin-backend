@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { PrismaService } from '@/infra/prisma/prisma.service';
+import { AiEvent } from '@/shared/constants/event';
 import { requestContext } from '@/shared/context/request-context';
 
 import { estimateCost } from './ai.constants';
@@ -20,7 +22,10 @@ export interface AiCallLogEntry {
 export class AiUsageService {
   private readonly logger = new Logger(AiUsageService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   log(entry: AiCallLogEntry): void {
     const usage = entry.usage;
@@ -43,6 +48,15 @@ export class AiUsageService {
       .catch((err: unknown) => {
         this.logger.warn(`AI 调用日志落库失败: ${err instanceof Error ? err.message : err}`);
       });
+
+    // 调用失败 → 发事件，由通知模块消费（跨层只走事件不走 import）
+    if (entry.status === 'error' && entry.userId) {
+      this.eventEmitter.emit(AiEvent.callFailed, {
+        userId: entry.userId,
+        model: entry.model,
+        errorMsg: entry.errorMsg ?? 'AI 调用失败，请稍后重试',
+      });
+    }
   }
 
   /** 用量汇总（管理端报表）：按厂商 + 模型分组 */

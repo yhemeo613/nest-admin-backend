@@ -48,18 +48,27 @@ export class OpenAiCompatibleProvider implements ILlmProvider {
     const completion = await this.client.chat.completions.create(
       {
         model,
-        messages: params.messages,
+        messages: params.messages as unknown as OpenAI.ChatCompletionMessageParam[],
         temperature: params.temperature,
         max_tokens: params.maxTokens,
+        ...(params.tools?.length ? { tools: params.tools } : {}),
       },
       { signal: params.signal },
     );
     const choice = completion.choices[0];
+    const toolCalls = choice?.message.tool_calls;
     return {
       content: choice?.message?.content ?? '',
       usage: completion.usage ? this.toUsage(completion.usage) : null,
       finishReason: choice?.finish_reason ?? null,
       model,
+      toolCalls: toolCalls?.length
+        ? toolCalls.map((tc) => ({
+            id: tc.id,
+            name: tc.function.name,
+            arguments: tc.function.arguments,
+          }))
+        : undefined,
     };
   }
 
@@ -68,25 +77,42 @@ export class OpenAiCompatibleProvider implements ILlmProvider {
     const stream = await this.client.chat.completions.create(
       {
         model,
-        messages: params.messages,
+        messages: params.messages as unknown as OpenAI.ChatCompletionMessageParam[],
         temperature: params.temperature,
         max_tokens: params.maxTokens,
         stream: true,
         stream_options: { include_usage: true },
+        ...(params.tools?.length ? { tools: params.tools } : {}),
       },
       { signal: params.signal },
     );
-    let usageEmitted = false;
+    let usage: TokenUsage | null = null;
+    // 流式 tool_calls 分片聚合（id/名称/参数按 index 拼接）
+    const toolCalls: { id: string; name: string; arguments: string }[] = [];
     for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content ?? '';
-      if (delta) yield { delta, done: false };
+      const delta = chunk.choices[0]?.delta;
+      const content = delta?.content ?? '';
+      if (content) yield { delta: content, done: false };
+      if (delta?.tool_calls) {
+        for (const part of delta.tool_calls) {
+          const index = part.index ?? 0;
+          if (!toolCalls[index]) toolCalls[index] = { id: '', name: '', arguments: '' };
+          if (part.id) toolCalls[index].id = part.id;
+          if (part.function?.name) toolCalls[index].name += part.function.name;
+          if (part.function?.arguments) toolCalls[index].arguments += part.function.arguments;
+        }
+      }
       if (chunk.usage) {
-        usageEmitted = true;
-        yield { delta: '', done: true, usage: this.toUsage(chunk.usage) };
+        usage = this.toUsage(chunk.usage);
       }
     }
-    // 厂商未回传 usage 时兜底一个结束帧，避免覆盖已发出的真实用量
-    if (!usageEmitted) yield { delta: '', done: true, usage: null };
+    // 统一在流结束发一个结束帧（含 usage 与聚合后的 toolCalls）
+    yield {
+      delta: '',
+      done: true,
+      usage,
+      ...(toolCalls.length ? { toolCalls } : {}),
+    };
   }
 
   async embed(texts: string[]): Promise<number[][]> {

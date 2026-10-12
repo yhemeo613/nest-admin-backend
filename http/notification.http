@@ -1,0 +1,21 @@
+@host = http://localhost:3000/api/v1
+@accessToken = paste-your-access-token-here
+
+### 我的通知列表 + 各类型未读数（登录即可，按用户隔离）
+GET {{host}}/notifications
+Authorization: Bearer {{accessToken}}
+
+### 单条标为已读
+PATCH {{host}}/notifications/some-notification-id/read
+Authorization: Bearer {{accessToken}}
+
+### 全部标为已读（可带 type 限定 NOTICE/MESSAGE/TODO）
+POST {{host}}/notifications/read-all
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{}
+
+### 清空已读（软删除；可带 query type 限定）
+DELETE {{host}}/notifications/read
+Authorization: Bearer {{accessToken}}

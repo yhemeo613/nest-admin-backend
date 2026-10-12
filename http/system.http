@@ -1,0 +1,79 @@
+@host = http://localhost:3000/api/v1
+@accessToken = paste-your-access-token-here
+
+### 用户分页查询（带数据权限）
+GET {{host}}/system/users?page=1&pageSize=20&keyword=张
+Authorization: Bearer {{accessToken}}
+
+### 新增用户
+POST {{host}}/system/users
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "username": "zhangsan",
+  "password": "Init@123456",
+  "nickname": "张三",
+  "roleIds": []
+}
+
+### 修改用户（替换为用户 ID）
+PUT {{host}}/system/users/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "nickname": "张三丰"
+}
+
+### 分配角色（替换 ID）
+PUT {{host}}/system/users/00000000-0000-0000-0000-000000000000/roles
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "roleIds": ["role-id-here"]
+}
+
+### 角色分页查询
+GET {{host}}/system/roles?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### 新增角色（自定义数据范围示例）
+POST {{host}}/system/roles
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "code": "auditor",
+  "name": "审计员",
+  "dataScope": "CUSTOM",
+  "deptIds": ["tech-dept-fixed-id"]
+}
+
+### 给角色分配权限点
+PUT {{host}}/system/roles/role-id-here/permissions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "permissionIds": ["perm-id-here"]
+}
+
+### 权限树
+GET {{host}}/system/permissions/tree
+Authorization: Bearer {{accessToken}}
+
+### 部门树
+GET {{host}}/system/depts/tree
+Authorization: Bearer {{accessToken}}
+
+### 新增部门
+POST {{host}}/system/depts
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "研发一组",
+  "parentId": "tech-dept-fixed-id"
+}

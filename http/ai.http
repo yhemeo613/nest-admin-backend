@@ -1,0 +1,26 @@
+@host = http://localhost:3000/api/v1
+@accessToken = paste-your-access-token-here
+
+### AI 对话（同步）
+POST {{host}}/ai/chat
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "message": "你好，介绍一下你自己"
+}
+
+### AI 对话（SSE 流式）
+# 注意：响应为 text/event-stream，REST Client 会以流形式展示
+POST {{host}}/ai/chat/stream
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "message": "给我讲一个简短的故事"
+}
+
+### AI 用量汇总（需要 ai:usage:list 权限）
+GET {{host}}/ai/usage
+Authorization: Bearer {{accessToken}}

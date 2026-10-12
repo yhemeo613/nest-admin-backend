@@ -1,0 +1,38 @@
+@host = http://localhost:3000/api/v1
+# 登录后把返回的 accessToken 填到这里，后续请求自动复用
+@accessToken = paste-your-access-token-here
+
+### 登录（超管）
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### 登录（普通用户：仅 AI 对话权限）
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "demo",
+  "password": "Demo@123"
+}
+
+### 刷新令牌
+POST {{host}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "paste-refresh-token-here"
+}
+
+### 当前用户档案（角色/权限码/菜单树）
+GET {{host}}/auth/profile
+Authorization: Bearer {{accessToken}}
+
+### 登出
+POST {{host}}/auth/logout
+Authorization: Bearer {{accessToken}}

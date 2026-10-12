@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "Prisma.prisma",
+    "orta.vscode-jest",
+    "rangav.vscode-thunder-client",
+    "humao.rest-client"
+  ]
+}

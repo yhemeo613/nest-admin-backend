@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 通用枚举 ====================
+
+enum Status {
+  ENABLED
+  DISABLED
+}
+
+// 数据权限范围
+enum DataScope {
+  ALL               // 全部数据
+  DEPT_AND_CHILDREN // 本部门及以下
+  DEPT              // 仅本部门
+  SELF              // 仅本人
+  CUSTOM            // 自定义部门集合（sys_role_dept）
+}
+
+// 权限点类型：目录 / 菜单 / 按钮 / 接口
+enum PermType {
+  DIR
+  MENU
+  BUTTON
+  API
+}
+
+// ==================== 权限中枢 ====================
+
+model SysUser {
+  id        String    @id @default(uuid())
+  username  String    @unique
+  password  String // argon2 哈希
+  nickname  String
+  email     String?
+  phone     String?
+  avatar    String?
+  deptId    String?   @map("dept_id")
+  isSuper   Boolean   @default(false) @map("is_super")
+  status    Status    @default(ENABLED)
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  dept  SysDept?      @relation(fields: [deptId], references: [id])
+  roles SysUserRole[]
+
+  @@index([deptId])
+  @@map("sys_user")
+}
+
+model SysRole {
+  id        String    @id @default(uuid())
+  code      String    @unique // 角色编码，如 admin
+  name      String
+  dataScope DataScope @default(SELF) @map("data_scope")
+  status    Status    @default(ENABLED)
+  sort      Int       @default(0)
+  remark    String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  users SysUserRole[]
+  perms SysRolePermission[]
+  depts SysRoleDept[]
+
+  @@map("sys_role")
+}
+
+model SysPermission {
+  id        String   @id @default(uuid())
+  parentId  String?  @map("parent_id")
+  name      String // 显示名：用户管理 / 新增按钮
+  code      String   @unique // 权限码：system:user:create
+  type      PermType
+  path      String? // 前端路由（menu 时）
+  icon      String?
+  sort      Int      @default(0)
+  status    Status   @default(ENABLED)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   SysPermission?       @relation("PermTree", fields: [parentId], references: [id])
+  children SysPermission[]      @relation("PermTree")
+  roles    SysRolePermission[]
+
+  @@index([parentId])
+  @@map("sys_permission")
+}
+
+model SysDept {
+  id        String   @id @default(uuid())
+  parentId  String?  @map("parent_id")
+  // 物化路径，形如 ",0,1,2,"，查子树用 contains 免递归
+  ancestors String   @default(",")
+  name      String
+  sort      Int      @default(0)
+  status    Status   @default(ENABLED)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   SysDept?      @relation("DeptTree", fields: [parentId], references: [id])
+  children SysDept[]     @relation("DeptTree")
+  users    SysUser[]
+  roles    SysRoleDept[]
+
+  @@index([parentId])
+  @@index([ancestors])
+  @@map("sys_dept")
+}
+
+model SysUserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user SysUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role SysRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("sys_user_role")
+}
+
+model SysRolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       SysRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission SysPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("sys_role_permission")
+}
+
+// CUSTOM 数据范围时角色可见的部门集合
+model SysRoleDept {
+  roleId String @map("role_id")
+  deptId String @map("dept_id")
+
+  role SysRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  dept SysDept @relation(fields: [deptId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, deptId])
+  @@map("sys_role_dept")
+}
+
+// ==================== AI 审计 ====================
+
+model AiCallLog {
+  id               String   @id @default(uuid())
+  traceId          String?  @map("trace_id")
+  userId           String?  @map("user_id")
+  provider         String
+  model            String
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  totalTokens      Int      @default(0) @map("total_tokens")
+  costEstimate     Decimal? @map("cost_estimate") @db.Decimal(12, 6)
+  latencyMs        Int      @default(0) @map("latency_ms")
+  status           String // success / error / fallback
+  errorMsg         String?  @map("error_msg")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_call_log")
+}

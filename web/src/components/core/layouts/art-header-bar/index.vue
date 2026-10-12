@@ -88,7 +88,7 @@
         />
 
         <!-- 国际化按钮 -->
-        <ElDropdown
+        <!-- <ElDropdown
           @command="changeLanguage"
           popper-class="langDropDownStyle"
           v-if="shouldShowLanguage"
@@ -107,16 +107,21 @@
               </div>
             </ElDropdownMenu>
           </template>
-        </ElDropdown>
+        </ElDropdown> -->
 
-        <!-- 通知按钮 -->
+        <!-- 通知按钮（角标 = 未读总数，数据源 useNoticeStore） -->
         <ArtIconButton
           v-if="shouldShowNotification"
           icon="ri:notification-2-line"
           class="notice-button relative"
           @click="visibleNotice"
         >
-          <div class="absolute top-2 right-2 size-1.5 !bg-danger rounded-full"></div>
+          <span
+            v-if="noticeStore.totalUnread > 0"
+            class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-danger text-white text-[10px] leading-4 text-center"
+          >
+            {{ noticeStore.totalUnread > 99 ? '99+' : noticeStore.totalUnread }}
+          </span>
         </ArtIconButton>
 
         <!-- 聊天按钮 -->
@@ -172,13 +177,14 @@
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { useFullscreen, useWindowSize } from '@vueuse/core'
-  import { LanguageEnum, MenuTypeEnum } from '@/enums/appEnum'
+  import { MenuTypeEnum } from '@/enums/appEnum'
   import { useSettingStore } from '@/store/modules/setting'
   import { useUserStore } from '@/store/modules/user'
   import { useMenuStore } from '@/store/modules/menu'
   import AppConfig from '@/config'
-  import { languageOptions } from '@/locales'
+  // import { languageOptions } from '@/locales' // 国际化下拉已隐藏
   import { mittBus } from '@/utils/sys'
+  import { useNoticeStore } from '@/store/modules/notice'
   import { themeAnimation } from '@/utils/ui/animation'
   import { useCommon } from '@/hooks/core/useCommon'
   import { useHeaderBar } from '@/hooks/core/useHeaderBar'
@@ -196,6 +202,7 @@
   const settingStore = useSettingStore()
   const userStore = useUserStore()
   const menuStore = useMenuStore()
+  const noticeStore = useNoticeStore()
 
   // 顶部栏功能配置
   const {
@@ -207,7 +214,7 @@
     shouldShowFullscreen,
     shouldShowNotification,
     shouldShowChat,
-    shouldShowLanguage,
+    // shouldShowLanguage, // 国际化下拉已隐藏
     shouldShowSettings,
     shouldShowThemeToggle,
     fastEnterMinWidth: headerBarFastEnterMinWidth
@@ -280,16 +287,15 @@
     locale.value = language.value
   }
 
-  /**
-   * 切换系统语言
-   * @param {LanguageEnum} lang - 目标语言类型
-   */
-  const changeLanguage = (lang: LanguageEnum): void => {
-    if (locale.value === lang) return
-    locale.value = lang
-    userStore.setLanguage(lang)
-    reload(50)
-  }
+  // /**
+  //  * 切换系统语言（国际化下拉已隐藏）
+  //  */
+  // const changeLanguage = (lang: LanguageEnum): void => {
+  //   if (locale.value === lang) return
+  //   locale.value = lang
+  //   userStore.setLanguage(lang)
+  //   reload(50)
+  // }
 
   /**
    * 打开设置面板

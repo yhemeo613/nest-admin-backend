@@ -159,4 +159,130 @@ declare namespace Api {
       costEstimate: number | null
     }
   }
+
+  /** 站内通知（真实接口） */
+  namespace Notify {
+    type NotifyType = 'NOTICE' | 'MESSAGE' | 'TODO'
+
+    interface NotificationItem {
+      id: string
+      type: NotifyType
+      title: string
+      content: string | null
+      link: string | null
+      read: boolean
+      createdAt: string
+    }
+
+    interface ListResponse {
+      list: NotificationItem[]
+      counts: Record<NotifyType, number>
+      totalUnread: number
+    }
+  }
+
+  /** 工作台（真实数据聚合） */
+  namespace Dashboard {
+    interface Stats {
+      system: {
+        users: number
+        roles: number
+        permissions: number
+        departments: number
+      }
+      ai: {
+        providers: number
+        models: number
+        defaultModel: string | null
+        callsToday: number
+        tokensToday: number
+        costToday: number
+        errorsToday: number
+        avgLatencyToday: number | null
+        callsTotal: number
+        tokensTotal: number
+      }
+    }
+
+    interface TrendPoint {
+      date: string
+      calls: number
+      tokens: number
+      cost: number
+    }
+
+    interface RecentCall {
+      id: string
+      provider: string
+      model: string
+      status: string
+      latencyMs: number
+      totalTokens: number
+      costEstimate: number | null
+      errorMsg: string | null
+      createdAt: string
+    }
+  }
+
+  /** AI 模型配置（供应商/模型，参考 CC Switch） */
+  namespace AiConfig {
+    /** 上游协议格式（与后端 AiProtocol 对应） */
+    type Protocol = 'OPENAI_COMPAT' | 'OLLAMA'
+
+    /** 供应商下的模型配置 */
+    interface ModelItem {
+      id?: string
+      name: string
+      label?: string | null
+      maxOutput?: number | null
+      contextWindow?: number | null
+      enabled?: boolean
+      isDefault?: boolean
+      sort?: number
+    }
+
+    /** 供应商配置（列表返回时 apiKey 为掩码） */
+    interface ProviderItem {
+      id: string
+      name: string
+      protocol: Protocol
+      baseUrl: string
+      apiKey: string | null
+      remark: string | null
+      enabled: boolean
+      sort: number
+      createdAt?: string
+      updatedAt?: string
+      models: ModelItem[]
+    }
+
+    /** 新增/修改供应商入参（models 传入则整体替换；apiKey 缺省保留原值） */
+    interface ProviderPayload {
+      name: string
+      protocol: Protocol
+      baseUrl: string
+      apiKey?: string
+      remark?: string
+      enabled?: boolean
+      sort?: number
+      models?: ModelItem[]
+    }
+
+    /** 对话页模型选择器项 */
+    interface ChatModelItem {
+      id: string
+      name: string
+      label: string
+      providerName: string
+      maxOutput: number | null
+      contextWindow: number | null
+      isDefault: boolean
+    }
+
+    /** GET /ai/models 响应 */
+    interface ChatModelsResponse {
+      defaultModelId: string | null
+      list: ChatModelItem[]
+    }
+  }
 }

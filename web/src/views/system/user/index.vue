@@ -37,12 +37,12 @@
       </div>
 
       <ElTable :data="list" v-loading="loading" row-key="id" stripe>
-        <ElTableColumn prop="username" label="用户名" min-width="120" />
-        <ElTableColumn prop="nickname" label="昵称" min-width="100" />
-        <ElTableColumn prop="deptName" label="部门" min-width="100">
+        <ElTableColumn prop="username" label="用户名" min-width="140" />
+        <ElTableColumn prop="nickname" label="昵称" min-width="120" />
+        <ElTableColumn prop="deptName" label="部门" min-width="120">
           <template #default="{ row }">{{ row.deptName ?? '-' }}</template>
         </ElTableColumn>
-        <ElTableColumn prop="roles" label="角色" min-width="140">
+        <ElTableColumn prop="roles" label="角色" min-width="160">
           <template #default="{ row }">
             <ElTag v-for="r in row.roles" :key="r" class="mr-1" size="small">{{ r }}</ElTag>
             <span v-if="!row.roles?.length">-</span>
@@ -55,10 +55,10 @@
             </ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="createdAt" label="创建时间" width="170">
+        <ElTableColumn prop="createdAt" label="创建时间" width="180">
           <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
         </ElTableColumn>
-        <ElTableColumn label="操作" width="280" fixed="right">
+        <ElTableColumn label="操作" width="320" fixed="right">
           <template #default="{ row }">
             <ElButton
               link

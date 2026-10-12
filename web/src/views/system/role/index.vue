@@ -30,8 +30,8 @@
       </div>
 
       <ElTable :data="list" v-loading="loading" row-key="id" stripe>
-        <ElTableColumn prop="name" label="角色名称" min-width="120" />
-        <ElTableColumn prop="code" label="编码" min-width="110">
+        <ElTableColumn prop="name" label="角色名称" min-width="140" />
+        <ElTableColumn prop="code" label="编码" min-width="120">
           <template #default="{ row }">
             <code class="text-xs bg-g-200 rounded px-1.5 py-0.5">{{ row.code }}</code>
           </template>
@@ -50,10 +50,10 @@
             </ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="remark" label="备注" min-width="120" show-overflow-tooltip>
+        <ElTableColumn prop="remark" label="备注" min-width="160">
           <template #default="{ row }">{{ row.remark ?? '-' }}</template>
         </ElTableColumn>
-        <ElTableColumn prop="createdAt" label="创建时间" width="170">
+        <ElTableColumn prop="createdAt" label="创建时间" width="180">
           <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
         </ElTableColumn>
         <ElTableColumn label="操作" width="290" fixed="right">

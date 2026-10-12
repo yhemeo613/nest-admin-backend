@@ -24,7 +24,7 @@
         :tree-props="{ children: 'children' }"
       >
         <ElTableColumn prop="name" label="名称" min-width="180" />
-        <ElTableColumn prop="code" label="权限码" min-width="200">
+        <ElTableColumn prop="code" label="权限码" min-width="220">
           <template #default="{ row }">
             <code class="text-xs bg-g-200 rounded px-1.5 py-0.5">{{ row.code }}</code>
           </template>
@@ -34,10 +34,10 @@
             <ElTag size="small" :type="typeTag(row.type)">{{ typeText(row.type) }}</ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="path" label="路由路径" min-width="140">
+        <ElTableColumn prop="path" label="路由路径" min-width="180">
           <template #default="{ row }">{{ row.path ?? '-' }}</template>
         </ElTableColumn>
-        <ElTableColumn prop="icon" label="图标" width="140">
+        <ElTableColumn prop="icon" label="图标" width="180">
           <template #default="{ row }">{{ row.icon ?? '-' }}</template>
         </ElTableColumn>
         <ElTableColumn prop="sort" label="排序" width="70" />

@@ -114,7 +114,8 @@
     "btnRead": "Mark as read",
     "bar": ["Notice", "Message", "Todo"],
     "text": ["No"],
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "clearRead": "Clear read"
   },
   "worktab": {
     "btn": {

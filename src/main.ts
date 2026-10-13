@@ -21,6 +21,19 @@ async function bootstrap(): Promise<void> {
 
   // ---- 安全与基础中间件 ----
   app.use(helmet());
+  // 挂件需被任意第三方站点加载：仅 widget.js / chat-widget 放开跨源资源限制
+  // （helmet 默认 CORP: same-origin 会拦截跨源 script 与 iframe 嵌入）
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/widget.js' || req.path === '/chat-widget') {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+    if (req.path === '/chat-widget') {
+      // 容器页以 iframe 嵌入第三方站点：放开 frame 限制（CSP frame-ancestors）
+      res.removeHeader('X-Frame-Options');
+      res.setHeader('Content-Security-Policy', 'frame-ancestors *');
+    }
+    next();
+  });
   app.use(compression());
   const corsOrigin = config.get<string>('app.corsOrigin', '');
   app.enableCors({ origin: corsOrigin ? corsOrigin.split(',') : true, credentials: true });
@@ -33,11 +46,15 @@ async function bootstrap(): Promise<void> {
     requestContext.run({ traceId }, next);
   });
 
-  // ---- 路由前缀：业务接口 /api/v1/*，健康检查留在根路径供探针使用 ----
+  // ---- 路由前缀：业务接口 /api/v1/*；健康检查与 C 端帮助中心（SEO 直出页）留在根路径 ----
   app.setGlobalPrefix('api/v1', {
     exclude: [
       { path: 'health', method: RequestMethod.GET },
       { path: 'ready', method: RequestMethod.GET },
+      { path: 'robots.txt', method: RequestMethod.GET },
+      { path: 'widget.js', method: RequestMethod.GET },
+      { path: 'chat-widget', method: RequestMethod.GET },
+      { path: 'help/*splat', method: RequestMethod.GET },
     ],
   });
 

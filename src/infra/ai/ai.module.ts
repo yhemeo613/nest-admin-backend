@@ -1,25 +1,14 @@
 import { Global, Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 
-import { LLM_PROVIDER } from './ai.constants';
-import { AiService } from './ai.service';
-import { AiProviderRegistry } from './ai-provider.registry';
+import { AiRegistry } from './ai.registry';
+import { AiAgentService } from './ai-agent.service';
+import { AiGateway } from './ai-gateway.service';
 import { AiUsageService } from './ai-usage.service';
-import { createLlmProvider } from './providers/provider.factory';
 
-/** AI 基础设施：全局模块，业务模块直接注入 AiService / AiProviderRegistry 即可 */
+/** AI 基础设施（LangChain 架构）：全局模块，业务模块直接注入 AiGateway / AiAgentService */
 @Global()
 @Module({
-  providers: [
-    {
-      provide: LLM_PROVIDER,
-      useFactory: (config: ConfigService) => createLlmProvider(config),
-      inject: [ConfigService],
-    },
-    AiService,
-    AiUsageService,
-    AiProviderRegistry,
-  ],
-  exports: [AiService, AiUsageService, AiProviderRegistry],
+  providers: [AiRegistry, AiUsageService, AiGateway, AiAgentService],
+  exports: [AiRegistry, AiUsageService, AiGateway, AiAgentService],
 })
 export class AiModule {}

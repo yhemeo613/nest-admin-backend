@@ -212,6 +212,173 @@ model AiModel {
   @@map("ai_model")
 }
 
+// ==================== SaaS 多租户（客服系统地基） ====================
+
+model Tenant {
+  id           String    @id @default(uuid())
+  name         String
+  code         String    @unique // 租户编码（全局唯一，小写字母/数字/中划线）
+  contactName  String?   @map("contact_name")
+  contactEmail String?   @map("contact_email")
+  ownerId      String?   @map("owner_id") // 自助注册归属的管理员账号（租户管理员身份锚点）
+  status       Status    @default(ENABLED)
+  remark       String?
+  createdBy    String?   @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  apiKeys       TenantApiKey[]
+  conversations TenantConversation[]
+  kbs           SaasKb[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@map("tenant")
+}
+
+// 租户接入凭证：明文仅创建时返回一次，库中只存 sha256
+model TenantApiKey {
+  id         String    @id @default(uuid())
+  tenantId   String    @map("tenant_id")
+  name       String
+  keyHash    String    @unique @map("key_hash") // sha256(明文)
+  keyPrefix  String    @map("key_prefix") // 展示用，如 sk-abc123
+  status     Status    @default(ENABLED)
+  lastUsedAt DateTime? @map("last_used_at")
+  createdBy  String?   @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("tenant_api_key")
+}
+
+// 访客会话（挂件/API 接入的对话会话）
+model TenantConversation {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  visitorId    String   @map("visitor_id") // 访客侧持久标识（挂件生成）
+  title        String? // 首条消息截断
+  status       String   @default("OPEN") // OPEN / CLOSED
+  messageCount Int      @default(0) @map("message_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages TenantMessage[]
+
+  @@index([tenantId, updatedAt])
+  @@index([tenantId, visitorId])
+  @@map("tenant_conversation")
+}
+
+// 会话消息（tenantId 冗余一份，便于行级租户过滤）
+model TenantMessage {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  conversationId   String   @map("conversation_id")
+  role             String // user / assistant
+  content          String   @db.Text
+  model            String? // assistant 消息命中的模型
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  createdAt        DateTime @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  conversation TenantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([tenantId])
+  @@map("tenant_message")
+}
+
+// ==================== SaaS 知识库（挂件问答与 SEO 页的内容源） ====================
+
+enum KbArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// 知识库（租户可多库：售后政策库、产品手册库…）
+model SaasKb {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  description String?
+  sort        Int      @default(0)
+  status      Status   @default(ENABLED)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  articles SaasKbArticle[]
+  tags     SaasKbTag[]
+
+  @@index([tenantId])
+  @@map("saas_kb")
+}
+
+// 文章：同时是 C 端 SEO 页与挂件检索的内容单元
+model SaasKbArticle {
+  id             String         @id @default(uuid())
+  kbId           String         @map("kb_id")
+  tenantId       String         @map("tenant_id") // 冗余租户维度，便于行级过滤
+  title          String
+  slug           String // URL 友好标识（同库唯一）
+  content        String         @db.Text // Markdown
+  status         KbArticleStatus @default(DRAFT)
+  seoTitle       String?        @map("seo_title") // SEO 页 <title>，缺省回填 title
+  seoDescription String?        @map("seo_description") // meta description，缺省取正文摘要
+  publishedAt    DateTime?      @map("published_at")
+  viewCount      Int            @default(0) @map("view_count") // SEO 页浏览计数
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  kb   SaasKb             @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  tags SaasKbArticleTag[]
+
+  @@unique([kbId, slug])
+  @@index([tenantId, status])
+  @@index([kbId, status])
+  @@map("saas_kb_article")
+}
+
+// 标签（租户内按库唯一）
+model SaasKbTag {
+  id        String   @id @default(uuid())
+  kbId      String   @map("kb_id")
+  tenantId  String   @map("tenant_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  kb       SaasKb             @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  articles SaasKbArticleTag[]
+
+  @@unique([kbId, name])
+  @@index([tenantId])
+  @@map("saas_kb_tag")
+}
+
+// 文章-标签多对多
+model SaasKbArticleTag {
+  articleId String @map("article_id")
+  tagId     String @map("tag_id")
+
+  article SaasKbArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     SaasKbTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("saas_kb_article_tag")
+}
+
 // ==================== 站内通知（真实接口驱动） ====================
 
 model SysNotification {

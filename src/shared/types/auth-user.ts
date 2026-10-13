@@ -5,6 +5,8 @@ export interface AuthUser {
   nickname: string;
   isSuper: boolean;
   deptId: string | null;
+  /** 自助注册租户的管理员：其归属租户 ID（非租户管理员为 null）——服务端强制数据隔离的依据 */
+  tenantId?: string | null;
 }
 
 /** 统一响应结构 */

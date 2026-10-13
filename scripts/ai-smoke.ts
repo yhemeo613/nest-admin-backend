@@ -1,13 +1,18 @@
 /**
- * AI Provider 真实链路冒烟测试（不进 CI）：
+ * AI 真实链路冒烟测试（不进 CI）：
  *   pnpm test:ai:smoke
- * 读取 .env.development 的 AI_* 配置，依次验证 chat / chatStream / embed。
+ * 读取 .env.development 的 AI_* 配置与数据库「模型配置」，依次验证 chat / chatStream / embed。
+ * LangChain 架构下走 AiGateway 门面（含审计落库）。
  */
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { config as loadEnv } from 'dotenv';
 
 import configuration from '../src/config/configuration';
-import { createLlmProvider } from '../src/infra/ai/providers/provider.factory';
+import { AiRegistry } from '../src/infra/ai/ai.registry';
+import { AiGateway } from '../src/infra/ai/ai-gateway.service';
+import { AiUsageService } from '../src/infra/ai/ai-usage.service';
+import { PrismaService } from '../src/infra/prisma/prisma.service';
 
 loadEnv({ path: '.env.development' });
 loadEnv();
@@ -20,12 +25,17 @@ const fakeConfig = {
 } as ConfigService;
 
 async function main(): Promise<void> {
-  const provider = createLlmProvider(fakeConfig);
-  console.log(`==> Provider: ${provider.name}`);
+  const prisma = new PrismaService(fakeConfig);
+  const registry = new AiRegistry(prisma, fakeConfig);
+  const usage = new AiUsageService(prisma, new EventEmitter2());
+  const gateway = new AiGateway(registry, usage);
+
+  const route = (await registry.resolve()) ?? registry.envDefault();
+  console.log(`==> 模型: ${route.modelName}（厂商 ${route.providerName}）`);
 
   // 1. 同步对话
   const startedAt = Date.now();
-  const result = await provider.chat({
+  const result = await gateway.chat('ai-smoke', {
     messages: [{ role: 'user', content: '用一句话介绍 NestJS' }],
     maxTokens: 1024,
   });
@@ -37,21 +47,21 @@ async function main(): Promise<void> {
 
   // 2. 流式对话
   let streamed = '';
-  let usage: unknown = null;
-  for await (const delta of provider.chatStream({
+  let usageOut: unknown = null;
+  for await (const delta of gateway.chatStream('ai-smoke', {
     messages: [{ role: 'user', content: '用一句话介绍 TypeScript' }],
     maxTokens: 1024,
   })) {
-    if (delta.done) usage = delta.usage;
+    if (delta.done) usageOut = delta.usage;
     else streamed += delta.delta;
   }
   console.log(`==> chatStream 成功，共 ${streamed.length} 字符`);
   console.log(`    内容: ${streamed.slice(0, 120)}${streamed.length > 120 ? '...' : ''}`);
-  console.log(`    用量: ${JSON.stringify(usage)}`);
+  console.log(`    用量: ${JSON.stringify(usageOut)}`);
 
   // 3. 向量化（部分厂商无 embedding 模型，失败仅提示不判负）
   try {
-    const vectors = await provider.embed(['你好']);
+    const vectors = await gateway.embed(['你好']);
     console.log(`==> embed 成功，维度 ${vectors[0]?.length}`);
   } catch (error) {
     console.log(
@@ -59,6 +69,7 @@ async function main(): Promise<void> {
     );
   }
 
+  await prisma.$disconnect();
   console.log('==> 冒烟测试通过');
 }
 

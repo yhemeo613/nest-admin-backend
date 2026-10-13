@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -8,8 +8,9 @@ import { AuthUser } from '@/shared/types/auth-user';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { ProfileDto, TokenPairDto } from './dto/profile.dto';
+import { ChangePasswordDto, ProfileDto, TokenPairDto, UpdateProfileDto } from './dto/profile.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('认证')
 @Controller('auth')
@@ -33,6 +34,15 @@ export class AuthController {
     return this.authService.refresh(dto);
   }
 
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: '租户自助注册（开通租户 + 管理员账号，限流 3 次/分钟）' })
+  register(@Body() dto: RegisterDto): Promise<null> {
+    return this.authService.register(dto);
+  }
+
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -47,5 +57,23 @@ export class AuthController {
   @ApiOperation({ summary: '当前用户档案（用户/角色/权限码/菜单树）' })
   profile(@CurrentUser() user: AuthUser): Promise<ProfileDto> {
     return this.authService.profile(user.userId);
+  }
+
+  @Put('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '修改自己的资料（昵称/邮箱/手机号，登录即可）' })
+  updateProfile(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<{ nickname: string; email: string | null; phone: string | null }> {
+    return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @Put('password')
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: '修改自己的密码（验旧密，成功后强制重新登录，限流 5 次/分钟）' })
+  changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto): Promise<null> {
+    return this.authService.changePassword(user.userId, dto);
   }
 }

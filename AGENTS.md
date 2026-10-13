@@ -83,15 +83,16 @@ nest后端框架/
 - 跨表写入用 `prisma.$transaction`；注意 N+1（用 `include/select`）。
 - Windows 注意：后端服务运行期间 query engine DLL 被占用，`prisma generate` 会报 EPERM——先停后端再生成。
 
-### 3.6 AI 基础设施
+### 3.6 AI 基础设施（LangChain 架构）
 
-- 业务代码**只注入 `AiService`**，禁止 `import 'openai'` 等 SDK（ESLint `no-restricted-imports` 拦截）。
+- 业务代码**只注入 `AiGateway`（普通对话/向量化）或 `AiAgentService`（工具调用 Agent）**，禁止 `import 'openai'`、`import 'langchain'`、`@langchain/*` 等（ESLint `no-restricted-imports` 拦截；LangChain 只允许出现在 `src/infra/ai/`）。
+- 模型实例由 `AiRegistry` 解析：数据库「模型配置」优先，env 兜底；主→备降级与 `ai_call_log` 审计由门面/回调自动处理，不要绕过。
+- Agent 工具在业务层用 zod schema 声明（`AgentToolSpec`），权限折叠与 LangChain 装配由 `AiAgentService` 完成。
 - Prompt 只放 `src/infra/ai/prompts/{场景}.v{N}.md`，禁止在业务代码里拼接 prompt 字符串。
-- 每次 AI 调用会自动落 `ai_call_log` 审计，不要绕过门面直连 Provider。
 
 ### 3.7 测试要求
 
-- 单测与源码同目录 `*.spec.ts`，依赖全部 mock（AI 注入 Mock Provider）；**改核心业务逻辑必须补/改对应单测**。
+- 单测与源码同目录 `*.spec.ts`，依赖全部 mock（AI 注入 MockChatModel / Stub 门面）；**改核心业务逻辑必须补/改对应单测**。
 - e2e 前置：`docker compose up -d` → `pnpm prisma:migrate:test && NODE_ENV=test pnpm prisma:seed` → `pnpm test:e2e`。权限链路改动必须过 e2e。
 
 ---

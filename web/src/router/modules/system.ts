@@ -31,17 +31,8 @@ export const systemRoutes: AppRouteRecord = {
       }
     },
     {
-      path: 'user-center',
-      name: 'UserCenter',
-      component: '/system/user-center',
-      meta: {
-        title: 'menus.system.userCenter',
-        isHide: true,
-        keepAlive: true,
-        isHideTab: true
-      }
-    },
-    {
+      // user-center 已提升为静态路由（src/router/routes/staticRoutes.ts）：
+      // 后端菜单模式下模板 asyncRoutes 不注册，个人中心必须人人可达
       path: 'menu',
       name: 'Menus',
       component: '/system/menu',

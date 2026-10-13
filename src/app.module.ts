@@ -16,6 +16,7 @@ import { AuthModule } from '@/modules/auth/auth.module';
 import { DashboardModule } from '@/modules/dashboard/dashboard.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { NotificationModule } from '@/modules/notification/notification.module';
+import { SaasModule } from '@/modules/saas/saas.module';
 import { SystemModule } from '@/modules/system/system.module';
 import { AllExceptionsFilter } from '@/shared/filters/all-exceptions.filter';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
@@ -62,6 +63,7 @@ import { SharedModule } from '@/shared/shared.module';
     AiConfigModule,
     DashboardModule,
     NotificationModule,
+    SaasModule,
     HealthModule,
   ],
   providers: [

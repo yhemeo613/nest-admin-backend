@@ -72,6 +72,8 @@ declare namespace Api {
       userId: string
       userName: string
       nickName: string
+      email?: string
+      phone?: string
       avatar?: string
       deptId?: string | null
       isSuper?: boolean
@@ -283,6 +285,159 @@ declare namespace Api {
     interface ChatModelsResponse {
       defaultModelId: string | null
       list: ChatModelItem[]
+    }
+  }
+
+  /** SaaS 多租户（租户运营 + 访客会话） */
+  namespace Saas {
+    /** 租户列表项（与后端 TenantView 对应） */
+    interface TenantItem {
+      id: string
+      name: string
+      code: string
+      contactName: string | null
+      contactEmail: string | null
+      status: Api.Common.EnableStatus
+      remark: string | null
+      conversationCount: number
+      apiKeyCount: number
+      createdAt: string
+      updatedAt: string
+    }
+
+    type TenantList = Api.Common.PaginatedResponse<TenantItem>
+
+    type TenantSearchParams = Partial<
+      Pick<TenantItem, 'status'> & { keyword: string } & Api.Common.CommonSearchParams
+    >
+
+    /** API Key 列表项（明文只在创建响应中出现一次） */
+    interface ApiKeyItem {
+      id: string
+      tenantId: string
+      name: string
+      keyPrefix: string
+      status: Api.Common.EnableStatus
+      lastUsedAt: string | null
+      createdAt: string
+      /** 明文 Key，仅创建接口返回 */
+      plaintext?: string
+    }
+
+    /** 会话列表项（与后端 ConversationView 对应） */
+    interface ConversationItem {
+      id: string
+      tenantId: string
+      tenantName: string | null
+      visitorId: string
+      title: string | null
+      status: 'OPEN' | 'CLOSED'
+      messageCount: number
+      createdAt: string
+      updatedAt: string
+    }
+
+    type ConversationList = Api.Common.PaginatedResponse<ConversationItem>
+
+    type ConversationSearchParams = Partial<
+      Pick<ConversationItem, 'tenantId' | 'visitorId' | 'status'> & Api.Common.CommonSearchParams
+    >
+
+    /** 会话消息 */
+    interface ConversationMessage {
+      id: string
+      role: string
+      content: string
+      model: string | null
+      promptTokens: number
+      completionTokens: number
+      createdAt: string
+    }
+
+    /** 会话详情（含全部消息） */
+    interface ConversationDetail extends ConversationItem {
+      messages: ConversationMessage[]
+    }
+
+    // ==================== 知识库 ====================
+
+    type KbStatus = 'ENABLED' | 'DISABLED'
+    type ArticleStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+
+    /** 知识库列表项 */
+    interface KbItem {
+      id: string
+      tenantId: string
+      tenantName: string | null
+      name: string
+      description: string | null
+      sort: number
+      status: KbStatus
+      articleCount: number
+      publishedCount: number
+      createdAt: string
+      updatedAt: string
+    }
+
+    type KbList = Api.Common.PaginatedResponse<KbItem>
+
+    type KbSearchParams = Partial<
+      Pick<KbItem, 'tenantId'> & { keyword: string } & Api.Common.CommonSearchParams
+    >
+
+    /** 文章标签 */
+    interface ArticleTag {
+      id: string
+      name: string
+    }
+
+    /** 文章列表项 */
+    interface ArticleItem {
+      id: string
+      kbId: string
+      tenantId: string
+      title: string
+      slug: string
+      status: ArticleStatus
+      seoTitle: string | null
+      seoDescription: string | null
+      publishedAt: string | null
+      viewCount: number
+      tags: ArticleTag[]
+      createdAt: string
+      updatedAt: string
+    }
+
+    type ArticleList = Api.Common.PaginatedResponse<ArticleItem>
+
+    type ArticleSearchParams = Partial<
+      Pick<ArticleItem, 'status'> & {
+        keyword: string
+        tagId: string
+      } & Api.Common.CommonSearchParams
+    >
+
+    /** 文章详情（含正文） */
+    interface ArticleDetail extends ArticleItem {
+      content: string
+    }
+
+    /** 文章新增/修改入参 */
+    interface ArticlePayload {
+      title: string
+      slug: string
+      content: string
+      status?: ArticleStatus
+      seoTitle?: string
+      seoDescription?: string
+      tagIds?: string[]
+    }
+
+    /** 标签 */
+    interface KbTag {
+      id: string
+      name: string
+      articleCount: number
     }
   }
 }

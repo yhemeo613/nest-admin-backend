@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class TokenPairDto {
   @ApiProperty({ description: '访问令牌（2 小时有效）' })
@@ -22,12 +23,48 @@ export class ProfileMenuDto {
   @ApiProperty({ type: () => [ProfileMenuDto] }) children: ProfileMenuDto[];
 }
 
+/** 修改自己的资料（登录即可，字段缺省则不改） */
+export class UpdateProfileDto {
+  @ApiPropertyOptional({ description: '昵称', example: '张三' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 32)
+  nickname?: string;
+
+  @ApiPropertyOptional({ description: '邮箱', example: 'me@example.com' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: '邮箱格式不正确' })
+  email?: string;
+
+  @ApiPropertyOptional({ description: '手机号', example: '13800138000' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^1[3-9]\d{9}$/, { message: '手机号格式不正确' })
+  phone?: string;
+}
+
+/** 修改自己的密码（登录即可；成功后强制重新登录） */
+export class ChangePasswordDto {
+  @ApiProperty({ description: '当前密码' })
+  @IsString()
+  @Length(1, 64)
+  oldPassword: string;
+
+  @ApiProperty({ description: '新密码（6-64 位）', example: 'NewPass@123' })
+  @IsString()
+  @Length(6, 64)
+  newPassword: string;
+}
+
 export class ProfileDto {
   @ApiProperty({ description: '用户基本信息' })
   user: {
     id: string;
     username: string;
     nickname: string;
+    email: string | null;
+    phone: string | null;
     avatar: string | null;
     deptId: string | null;
     isSuper: boolean;

@@ -15,6 +15,7 @@ const CODE_HTTP_MAP: Partial<Record<ErrorCode, HttpStatus>> = {
   [ErrorCode.USER_DISABLED]: HttpStatus.FORBIDDEN,
   [ErrorCode.USER_NOT_FOUND]: HttpStatus.NOT_FOUND,
   [ErrorCode.USERNAME_EXISTS]: HttpStatus.CONFLICT,
+  [ErrorCode.OLD_PASSWORD_WRONG]: HttpStatus.BAD_REQUEST,
   [ErrorCode.ROLE_NOT_FOUND]: HttpStatus.NOT_FOUND,
   [ErrorCode.ROLE_CODE_EXISTS]: HttpStatus.CONFLICT,
   [ErrorCode.ROLE_IN_USE]: HttpStatus.CONFLICT,
@@ -28,6 +29,11 @@ const CODE_HTTP_MAP: Partial<Record<ErrorCode, HttpStatus>> = {
   [ErrorCode.AI_CALL_FAILED]: HttpStatus.BAD_GATEWAY,
   [ErrorCode.AI_BUDGET_EXCEEDED]: HttpStatus.TOO_MANY_REQUESTS,
   [ErrorCode.AI_CONTENT_BLOCKED]: HttpStatus.BAD_REQUEST,
+  [ErrorCode.TENANT_NOT_FOUND]: HttpStatus.NOT_FOUND,
+  [ErrorCode.TENANT_CODE_EXISTS]: HttpStatus.CONFLICT,
+  [ErrorCode.API_KEY_NOT_FOUND]: HttpStatus.NOT_FOUND,
+  [ErrorCode.API_KEY_INVALID]: HttpStatus.UNAUTHORIZED,
+  [ErrorCode.CONVERSATION_NOT_FOUND]: HttpStatus.NOT_FOUND,
   [ErrorCode.INTERNAL_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
 };
 

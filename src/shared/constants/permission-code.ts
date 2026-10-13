@@ -42,6 +42,32 @@ export const PermissionCode = {
   AiConfigCreate: 'ai:config:create',
   AiConfigUpdate: 'ai:config:update',
   AiConfigDelete: 'ai:config:delete',
+  // SaaS 多租户运营
+  SaasTenantMenu: 'saas:tenant',
+  SaasTenantList: 'saas:tenant:list',
+  SaasTenantCreate: 'saas:tenant:create',
+  SaasTenantUpdate: 'saas:tenant:update',
+  SaasTenantDelete: 'saas:tenant:delete',
+  SaasApiKeyList: 'saas:apikey:list',
+  SaasApiKeyCreate: 'saas:apikey:create',
+  SaasApiKeyDelete: 'saas:apikey:delete',
+  // SaaS 访客会话
+  SaasConversationMenu: 'saas:conversation',
+  SaasConversationList: 'saas:conversation:list',
+  SaasConversationDetail: 'saas:conversation:detail',
+  // SaaS 知识库
+  SaasKbMenu: 'saas:kb',
+  SaasKbList: 'saas:kb:list',
+  SaasKbCreate: 'saas:kb:create',
+  SaasKbUpdate: 'saas:kb:update',
+  SaasKbDelete: 'saas:kb:delete',
+  SaasKbArticleList: 'saas:kb:article:list',
+  SaasKbArticleCreate: 'saas:kb:article:create',
+  SaasKbArticleUpdate: 'saas:kb:article:update',
+  SaasKbArticleDelete: 'saas:kb:article:delete',
+  SaasKbTagList: 'saas:kb:tag:list',
+  SaasKbTagCreate: 'saas:kb:tag:create',
+  SaasKbTagDelete: 'saas:kb:tag:delete',
 } as const;
 
 export type PermissionCodeValue = (typeof PermissionCode)[keyof typeof PermissionCode];

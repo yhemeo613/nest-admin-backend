@@ -25,7 +25,7 @@ export class AiChatController {
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'AI 对话（同步，限流 20 次/分钟）' })
   async chat(@Body() dto: ChatDto, @CurrentUser() user: AuthUser): Promise<ChatResponseDto> {
-    const result = await this.aiChatService.chat(user.userId, user, dto);
+    const result = await this.aiChatService.chat(user, dto);
     return { content: result.content, usage: result.usage, model: result.model };
   }
 
@@ -51,12 +51,7 @@ export class AiChatController {
     return new Observable<MessageEvent>((subscriber) => {
       void (async () => {
         try {
-          for await (const delta of this.aiChatService.chatStream(
-            user.userId,
-            user,
-            dto,
-            abort.signal,
-          )) {
+          for await (const delta of this.aiChatService.chatStream(user, dto, abort.signal)) {
             subscriber.next({ data: delta });
           }
         } catch (error) {

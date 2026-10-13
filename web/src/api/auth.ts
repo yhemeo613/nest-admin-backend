@@ -41,6 +41,8 @@ export async function fetchGetUserInfo(): Promise<Api.Auth.UserInfo> {
       id: string
       username: string
       nickname: string
+      email: string | null
+      phone: string | null
       avatar: string | null
       deptId: string | null
       isSuper: boolean
@@ -55,6 +57,8 @@ export async function fetchGetUserInfo(): Promise<Api.Auth.UserInfo> {
     userId: profile.user.id,
     userName: profile.user.username,
     nickName: profile.user.nickname,
+    email: profile.user.email ?? undefined,
+    phone: profile.user.phone ?? undefined,
     avatar: profile.user.avatar ?? undefined,
     deptId: profile.user.deptId,
     isSuper: profile.user.isSuper,
@@ -62,4 +66,35 @@ export async function fetchGetUserInfo(): Promise<Api.Auth.UserInfo> {
     permissions: profile.permissions,
     menus: profile.menus
   }
+}
+
+/**
+ * 修改自己的资料（昵称/邮箱/手机号）
+ */
+export function fetchUpdateProfile(data: { nickname?: string; email?: string; phone?: string }) {
+  return request.put<{ nickname: string; email: string | null; phone: string | null }>({
+    url: '/api/v1/auth/profile',
+    params: data
+  })
+}
+
+/**
+ * 修改自己的密码（成功后后端强制下线，前端随后跳登录页）
+ */
+export function fetchChangePassword(data: { oldPassword: string; newPassword: string }) {
+  return request.put<null>({ url: '/api/v1/auth/password', params: data })
+}
+
+/**
+ * 租户自助注册（开通租户 + 管理员账号）
+ */
+export function fetchRegister(data: {
+  tenantName: string
+  tenantCode: string
+  username: string
+  password: string
+  nickname?: string
+  email?: string
+}) {
+  return request.post<null>({ url: '/api/v1/auth/register', params: data })
 }

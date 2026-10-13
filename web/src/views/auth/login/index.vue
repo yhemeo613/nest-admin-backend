@@ -77,6 +77,12 @@
               <ElCheckbox v-model="formData.rememberPassword">{{
                 $t('login.rememberPwd')
               }}</ElCheckbox>
+              <span class="flex gap-3">
+                <RouterLink class="text-blue-500" :to="RoutesAlias.ForgetPassword"
+                  >忘记密码</RouterLink
+                >
+                <RouterLink class="text-blue-500" :to="RoutesAlias.Register">注册账号</RouterLink>
+              </span>
             </div>
 
             <div style="margin-top: 30px">
@@ -99,6 +105,7 @@
 
 <script setup lang="ts">
   import AppConfig from '@/config'
+  import { RoutesAlias } from '@/router/routesAlias'
   import { useUserStore } from '@/store/modules/user'
   import { useI18n } from 'vue-i18n'
   import { HttpError } from '@/utils/http/error'

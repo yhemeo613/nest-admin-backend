@@ -1,5 +1,4 @@
 /** AI 基础设施常量 */
-export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 
 /** 上游协议格式（供应商级配置，可扩展；对应 CC Switch 的「上游格式」概念） */
 export const AiProtocol = {

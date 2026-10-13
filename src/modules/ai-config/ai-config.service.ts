@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { AiProtocol } from '@/infra/ai/ai.constants';
-import { AiProviderRegistry } from '@/infra/ai/ai-provider.registry';
+import { AiRegistry } from '@/infra/ai/ai.registry';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { ErrorCode } from '@/shared/constants/error-code';
 import { BusinessException } from '@/shared/exceptions/business.exception';
@@ -52,7 +52,7 @@ export class AiConfigService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly registry: AiProviderRegistry,
+    private readonly registry: AiRegistry,
   ) {}
 
   async list(): Promise<ProviderView[]> {

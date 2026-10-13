@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { DataScope, PermType, PrismaClient, Status } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { config as loadEnv } from 'dotenv';
@@ -267,6 +269,161 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.BUTTON,
     parentCode: PermissionCode.AiConfigMenu,
   },
+  // ---------- SaaS 多租户运营 ----------
+  {
+    name: '租户运营',
+    code: 'saas',
+    type: PermType.DIR,
+    path: '/saas',
+    icon: 'ri:building-line',
+    sort: 300,
+  },
+  {
+    name: '租户管理',
+    code: PermissionCode.SaasTenantMenu,
+    type: PermType.MENU,
+    parentCode: 'saas',
+    path: '/saas/tenant',
+    sort: 1,
+  },
+  {
+    name: '租户查询',
+    code: PermissionCode.SaasTenantList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: '租户新增',
+    code: PermissionCode.SaasTenantCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: '租户修改',
+    code: PermissionCode.SaasTenantUpdate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: '租户删除',
+    code: PermissionCode.SaasTenantDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: 'Key 查询',
+    code: PermissionCode.SaasApiKeyList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: 'Key 创建',
+    code: PermissionCode.SaasApiKeyCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: 'Key 删除',
+    code: PermissionCode.SaasApiKeyDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasTenantMenu,
+  },
+  {
+    name: '访客会话',
+    code: PermissionCode.SaasConversationMenu,
+    type: PermType.MENU,
+    parentCode: 'saas',
+    path: '/saas/conversation',
+    sort: 2,
+  },
+  {
+    name: '会话查询',
+    code: PermissionCode.SaasConversationList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasConversationMenu,
+  },
+  {
+    name: '会话详情',
+    code: PermissionCode.SaasConversationDetail,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasConversationMenu,
+  },
+  // ---------- SaaS 知识库 ----------
+  {
+    name: '知识库',
+    code: PermissionCode.SaasKbMenu,
+    type: PermType.MENU,
+    parentCode: 'saas',
+    path: '/saas/kb',
+    icon: 'ri:book-2-line',
+    sort: 3,
+  },
+  {
+    name: '知识库查询',
+    code: PermissionCode.SaasKbList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '知识库新增',
+    code: PermissionCode.SaasKbCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '知识库修改',
+    code: PermissionCode.SaasKbUpdate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '知识库删除',
+    code: PermissionCode.SaasKbDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '文章查询',
+    code: PermissionCode.SaasKbArticleList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '文章新增',
+    code: PermissionCode.SaasKbArticleCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '文章修改',
+    code: PermissionCode.SaasKbArticleUpdate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '文章删除',
+    code: PermissionCode.SaasKbArticleDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '标签查询',
+    code: PermissionCode.SaasKbTagList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '标签新增',
+    code: PermissionCode.SaasKbTagCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
+  {
+    name: '标签删除',
+    code: PermissionCode.SaasKbTagDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.SaasKbMenu,
+  },
 ];
 
 async function seedPermissions(): Promise<Map<string, string>> {
@@ -354,6 +511,46 @@ async function seedRoles(allPermIds: string[]): Promise<void> {
   await prisma.sysRolePermission.deleteMany({ where: { roleId: common.id } });
   await prisma.sysRolePermission.createMany({
     data: commonPerms.map((p) => ({ roleId: common.id, permissionId: p.id })),
+  });
+
+  // 租户管理员：自助注册时分配，只能使用工作台/AI 问答/知识库/会话/自家 API Key
+  const tenantAdmin = await prisma.sysRole.upsert({
+    where: { code: 'tenant_admin' },
+    update: { dataScope: DataScope.SELF },
+    create: { code: 'tenant_admin', name: '租户管理员', dataScope: DataScope.SELF, sort: 20 },
+  });
+  const tenantAdminPermCodes = [
+    PermissionCode.Dashboard,
+    PermissionCode.AiChatMenu,
+    PermissionCode.AiChatAsk,
+    PermissionCode.AiChatHistory,
+    PermissionCode.SaasTenantMenu,
+    PermissionCode.SaasTenantList,
+    PermissionCode.SaasApiKeyList,
+    PermissionCode.SaasApiKeyCreate,
+    PermissionCode.SaasApiKeyDelete,
+    PermissionCode.SaasKbMenu,
+    PermissionCode.SaasKbList,
+    PermissionCode.SaasKbCreate,
+    PermissionCode.SaasKbUpdate,
+    PermissionCode.SaasKbDelete,
+    PermissionCode.SaasKbArticleList,
+    PermissionCode.SaasKbArticleCreate,
+    PermissionCode.SaasKbArticleUpdate,
+    PermissionCode.SaasKbArticleDelete,
+    PermissionCode.SaasKbTagList,
+    PermissionCode.SaasKbTagCreate,
+    PermissionCode.SaasKbTagDelete,
+    PermissionCode.SaasConversationMenu,
+    PermissionCode.SaasConversationList,
+    PermissionCode.SaasConversationDetail,
+  ];
+  const tenantAdminPerms = await prisma.sysPermission.findMany({
+    where: { code: { in: tenantAdminPermCodes } },
+  });
+  await prisma.sysRolePermission.deleteMany({ where: { roleId: tenantAdmin.id } });
+  await prisma.sysRolePermission.createMany({
+    data: tenantAdminPerms.map((p) => ({ roleId: tenantAdmin.id, permissionId: p.id })),
   });
 }
 
@@ -524,6 +721,40 @@ async function seedNotifications(): Promise<void> {
   }
 }
 
+/**
+ * 演示租户 + 演示 API Key（仅本地验证，固定 ID 幂等）。
+ * 明文 Key 与内置账号一样仅用于本地联调，生产环境严禁 seed 造 Key。
+ */
+async function seedSaasTenant(): Promise<void> {
+  await prisma.tenant.upsert({
+    where: { id: 'seed-tenant-demo' },
+    update: {},
+    create: {
+      id: 'seed-tenant-demo',
+      name: '演示租户',
+      code: 'demo-shop',
+      contactName: '演示联系人',
+      contactEmail: 'demo@example.com',
+      remark: '由 seed 创建的本地演示租户',
+      status: Status.ENABLED,
+    },
+  });
+
+  const plainKey = 'sk-local-demo-001';
+  await prisma.tenantApiKey.upsert({
+    where: { id: 'seed-apikey-demo' },
+    update: {},
+    create: {
+      id: 'seed-apikey-demo',
+      tenantId: 'seed-tenant-demo',
+      name: '本地演示 Key',
+      keyHash: createHash('sha256').update(plainKey).digest('hex'),
+      keyPrefix: plainKey.slice(0, 8),
+      status: Status.ENABLED,
+    },
+  });
+}
+
 async function main(): Promise<void> {
   console.log('==> 初始化权限树...');
   const codeToId = await seedPermissions();
@@ -538,7 +769,11 @@ async function main(): Promise<void> {
   await seedAiProvider();
   console.log('==> 初始化站内通知样本...');
   await seedNotifications();
-  console.log('==> 完成。内置账号：admin/Admin@123（超管）、demo/Demo@123（普通用户）');
+  console.log('==> 初始化 SaaS 演示租户...');
+  await seedSaasTenant();
+  console.log(
+    '==> 完成。内置账号：admin/Admin@123（超管）、demo/Demo@123（普通用户）；本地演示 API Key：sk-local-demo-001',
+  );
 }
 
 main()

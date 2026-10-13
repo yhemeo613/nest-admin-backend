@@ -23,6 +23,7 @@ export enum ErrorCode {
   USER_DISABLED = 10002,
   USER_NOT_FOUND = 10003,
   USERNAME_EXISTS = 10004,
+  OLD_PASSWORD_WRONG = 10005,
 
   ROLE_NOT_FOUND = 11001,
   ROLE_CODE_EXISTS = 11002,
@@ -38,6 +39,12 @@ export enum ErrorCode {
   AI_CALL_FAILED = 20001,
   AI_BUDGET_EXCEEDED = 20002,
   AI_CONTENT_BLOCKED = 20003,
+
+  TENANT_NOT_FOUND = 30001,
+  TENANT_CODE_EXISTS = 30002,
+  API_KEY_NOT_FOUND = 30101,
+  API_KEY_INVALID = 30102,
+  CONVERSATION_NOT_FOUND = 30201,
 
   INTERNAL_ERROR = 50000,
 }
@@ -55,6 +62,7 @@ export const ErrorMessage: Record<ErrorCode, string> = {
   [ErrorCode.USER_DISABLED]: '账号已被禁用',
   [ErrorCode.USER_NOT_FOUND]: '用户不存在',
   [ErrorCode.USERNAME_EXISTS]: '用户名已存在',
+  [ErrorCode.OLD_PASSWORD_WRONG]: '当前密码错误',
   [ErrorCode.ROLE_NOT_FOUND]: '角色不存在',
   [ErrorCode.ROLE_CODE_EXISTS]: '角色编码已存在',
   [ErrorCode.ROLE_IN_USE]: '角色已分配给用户，无法删除',
@@ -68,5 +76,10 @@ export const ErrorMessage: Record<ErrorCode, string> = {
   [ErrorCode.AI_CALL_FAILED]: 'AI 服务调用失败，请稍后重试',
   [ErrorCode.AI_BUDGET_EXCEEDED]: 'AI 调用额度已用尽',
   [ErrorCode.AI_CONTENT_BLOCKED]: '内容未通过安全审核',
+  [ErrorCode.TENANT_NOT_FOUND]: '租户不存在',
+  [ErrorCode.TENANT_CODE_EXISTS]: '租户编码已存在',
+  [ErrorCode.API_KEY_NOT_FOUND]: 'API Key 不存在',
+  [ErrorCode.API_KEY_INVALID]: 'API Key 无效或已禁用',
+  [ErrorCode.CONVERSATION_NOT_FOUND]: '会话不存在',
   [ErrorCode.INTERNAL_ERROR]: '服务器内部错误',
 };

@@ -17,4 +17,4 @@ coverage/
 prisma/*.db
 
 # 浏览器自动化页面快照（本地临时产物）
-.playwright-mcp/
+.playwright-mcp/.zcode/

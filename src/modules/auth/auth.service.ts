@@ -16,8 +16,15 @@ import { RefreshTokenPayload } from '@/shared/types/auth-user';
 import { buildTree } from '@/shared/utils/tree.util';
 
 import { LoginDto } from './dto/login.dto';
-import { ProfileDto, ProfileMenuDto, TokenPairDto } from './dto/profile.dto';
+import {
+  ChangePasswordDto,
+  ProfileDto,
+  ProfileMenuDto,
+  TokenPairDto,
+  UpdateProfileDto,
+} from './dto/profile.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -102,6 +109,8 @@ export class AuthService {
         id: user.id,
         username: user.username,
         nickname: user.nickname,
+        email: user.email,
+        phone: user.phone,
         avatar: user.avatar,
         deptId: user.deptId,
         isSuper: user.isSuper,
@@ -110,6 +119,116 @@ export class AuthService {
       permissions: permCodes,
       menus,
     };
+  }
+
+  /**
+   * 租户自助注册（闭环入口）：
+   * 一次事务完成「开通租户 + 创建管理员账号 + 分配租户管理员角色」。
+   * 租户 ownerId 锚定管理员 → JwtAuthGuard 据此做服务端数据隔离。
+   */
+  async register(dto: RegisterDto): Promise<null> {
+    const [tenantExists, userExists] = await Promise.all([
+      this.prisma.tenant.findFirst({
+        where: { code: dto.tenantCode, deletedAt: null },
+        select: { id: true },
+      }),
+      this.prisma.sysUser.findFirst({
+        where: { username: dto.username, deletedAt: null },
+        select: { id: true },
+      }),
+    ]);
+    if (tenantExists) throw new BusinessException(ErrorCode.TENANT_CODE_EXISTS);
+    if (userExists) throw new BusinessException(ErrorCode.USERNAME_EXISTS);
+
+    const tenantAdminRole = await this.prisma.sysRole.findUnique({
+      where: { code: 'tenant_admin' },
+      select: { id: true },
+    });
+    if (!tenantAdminRole) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '系统未初始化租户管理员角色，请联系平台管理员',
+      );
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.sysUser.create({
+        data: {
+          username: dto.username,
+          password: passwordHash,
+          nickname: dto.nickname || dto.username,
+          email: dto.email ?? null,
+          isSuper: false,
+          status: Status.ENABLED,
+          createdBy: 'register',
+        },
+      });
+      await tx.tenant.create({
+        data: {
+          name: dto.tenantName,
+          code: dto.tenantCode,
+          contactName: dto.nickname ?? null,
+          contactEmail: dto.email ?? null,
+          ownerId: user.id,
+          createdBy: user.id,
+        },
+      });
+      await tx.sysUserRole.create({ data: { userId: user.id, roleId: tenantAdminRole.id } });
+    });
+    this.logger.log(
+      `租户自助注册成功: ${dto.tenantName}(${dto.tenantCode}) 管理员=${dto.username}`,
+    );
+    return null;
+  }
+
+  /** 修改自己的资料（昵称/邮箱/手机号），同步清用户缓存保证顶部信息即时生效 */
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<{ nickname: string; email: string | null; phone: string | null }> {
+    const user = await this.prisma.sysUser.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!user) throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+
+    const updated = await this.prisma.sysUser.update({
+      where: { id: userId },
+      data: {
+        ...(dto.nickname !== undefined && { nickname: dto.nickname }),
+        ...(dto.email !== undefined && { email: dto.email }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+      },
+      select: { nickname: true, email: true, phone: true },
+    });
+    await this.redis.del(CacheKey.userInfo(userId));
+    this.logger.log(`用户更新资料: ${userId}`);
+    return updated;
+  }
+
+  /** 修改自己的密码：验旧密 → 改密 → 吊销刷新令牌与用户缓存（强制重新登录） */
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<null> {
+    const user = await this.prisma.sysUser.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
+    if (!user) throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+
+    const oldOk = await argon2.verify(user.password, dto.oldPassword).catch(() => false);
+    if (!oldOk) throw new BusinessException(ErrorCode.OLD_PASSWORD_WRONG);
+    if (dto.oldPassword === dto.newPassword) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '新密码不能与当前密码相同');
+    }
+
+    await this.prisma.sysUser.update({
+      where: { id: userId },
+      data: { password: await argon2.hash(dto.newPassword) },
+    });
+    // 强制下线：吊销刷新凭据 + 清用户缓存（与管理员重置密码同语义）
+    await this.logout(userId);
+    await this.redis.del(CacheKey.userInfo(userId));
+    this.logger.log(`用户修改密码成功（已强制下线）: ${user.username}(${userId})`);
+    return null;
   }
 
   private async issueTokens(

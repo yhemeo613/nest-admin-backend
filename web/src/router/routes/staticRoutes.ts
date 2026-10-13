@@ -25,6 +25,25 @@ export const staticRoutes: AppRouteRecordRaw[] = [
     meta: { title: 'menus.login.title', isHideTab: true }
   },
   {
+    path: '/auth/register',
+    name: 'Register',
+    component: () => import('@views/auth/register/index.vue'),
+    meta: { title: '注册', isHideTab: true }
+  },
+  {
+    path: '/auth/forget-password',
+    name: 'ForgetPassword',
+    component: () => import('@views/auth/forget-password/index.vue'),
+    meta: { title: '忘记密码', isHideTab: true }
+  },
+  // 个人中心：个人自助页，任何登录用户可用（后端菜单模式下模板 asyncRoutes 不注册，故放静态路由）
+  {
+    path: '/system/user-center',
+    name: 'UserCenter',
+    component: () => import('@views/system/user-center/index.vue'),
+    meta: { title: '个人中心', isHide: true, isHideTab: true }
+  },
+  {
     path: '/403',
     name: 'Exception403',
     component: () => import('@views/exception/403/index.vue'),

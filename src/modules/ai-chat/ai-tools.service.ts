@@ -2,32 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Status } from '@prisma/client';
 import * as argon2 from 'argon2';
+import * as z from 'zod';
 
+import { AgentToolContext, AgentToolSpec } from '@/infra/ai/ai-agent.service';
 import { AiUsageService } from '@/infra/ai/ai-usage.service';
-import { ChatToolDef, ToolCall } from '@/infra/ai/providers/llm-provider.interface';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { PermCacheEvent } from '@/shared/constants/cache-key';
-import { PermissionCode, PermissionCodeValue } from '@/shared/constants/permission-code';
+import { PermissionCode } from '@/shared/constants/permission-code';
 import { PermissionCacheService } from '@/shared/services/permission-cache.service';
 import { AuthUser } from '@/shared/types/auth-user';
 
-export interface ToolContext {
-  user: AuthUser;
-  /** 用户权限码集合（超管为空集，执行时旁路） */
-  perms: Set<string>;
-}
-
-export interface ToolExecResult {
-  ok: boolean;
-  data: unknown;
-}
-
-interface ToolSpec {
-  def: ChatToolDef;
-  /** 所需权限码（与 PermissionsGuard 同语义：超管旁路，其余必须命中） */
-  permission?: PermissionCodeValue;
-  run: (args: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
-}
+export type ToolContext = AgentToolContext;
 
 const startOfToday = (): Date => {
   const d = new Date();
@@ -44,9 +29,9 @@ const DATA_SCOPE_TEXT: Record<string, string> = {
 };
 
 /**
- * AI 工具注册表与执行器（Function Calling）：
- * - getTools() 下发给模型做意图决策
- * - execute() 带权限门控执行真实读写，失败以 {error} 结构回喂模型
+ * AI 工具注册表（LangChain Agent 版）：
+ * - 每个工具 = 名称/描述/zod schema/权限码/执行函数（AgentToolSpec，infra 统一装配为 LangChain 工具）
+ * - 权限门控与失败折叠（{error} 回喂模型、不中断 run）由 infra 的 AiAgentService 完成
  * - 写操作完成后发权限失效事件，保证「改权限不用重新登录」
  */
 @Injectable()
@@ -66,39 +51,8 @@ export class AiToolsService {
     return { user, perms };
   }
 
-  getTools(): ChatToolDef[] {
-    return this.specs().map((s) => s.def);
-  }
-
-  async execute(call: ToolCall, ctx: ToolContext): Promise<ToolExecResult> {
-    const spec = this.specs().find((s) => s.def.function.name === call.name);
-    if (!spec) return { ok: false, data: { error: `未知工具: ${call.name}` } };
-
-    if (spec.permission && !ctx.user.isSuper && !ctx.perms.has(spec.permission)) {
-      return {
-        ok: false,
-        data: { error: `权限不足，执行该操作需要 ${spec.permission} 权限` },
-      };
-    }
-
-    let args: Record<string, unknown>;
-    try {
-      args = call.arguments ? (JSON.parse(call.arguments) as Record<string, unknown>) : {};
-    } catch {
-      return { ok: false, data: { error: '工具参数不是合法 JSON' } };
-    }
-
-    try {
-      return { ok: true, data: await spec.run(args, ctx) };
-    } catch (error) {
-      return {
-        ok: false,
-        data: { error: error instanceof Error ? error.message : String(error) },
-      };
-    }
-  }
-
-  private specs(): ToolSpec[] {
+  /** 导出为 infra Agent 工具规格列表 */
+  toAgentSpecs(): AgentToolSpec[] {
     return [
       this.overviewSpec(),
       this.searchUsersSpec(),
@@ -114,18 +68,13 @@ export class AiToolsService {
 
   // ==================== 读工具 ====================
 
-  private overviewSpec(): ToolSpec {
+  private overviewSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.Dashboard,
-      def: {
-        type: 'function',
-        function: {
-          name: 'get_system_overview',
-          description:
-            '查询系统概览统计：用户/角色/权限点/部门数量、启用的供应商与模型数、今日 AI 调用次数。',
-          parameters: { type: 'object', properties: {}, required: [] },
-        },
-      },
+      name: 'get_system_overview',
+      description:
+        '查询系统概览统计：用户/角色/权限点/部门数量、启用的供应商与模型数、今日 AI 调用次数。',
+      schema: z.object({}),
       run: async () => {
         const today = startOfToday();
         const [users, roles, permissions, departments, providers, models, callsToday] =
@@ -145,31 +94,16 @@ export class AiToolsService {
     };
   }
 
-  private searchUsersSpec(): ToolSpec {
+  private searchUsersSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemUserList,
-      def: {
-        type: 'function',
-        function: {
-          name: 'search_users',
-          description:
-            '按关键词（用户名/昵称）分页搜索系统用户，返回用户名、昵称、部门、角色与状态。',
-          parameters: {
-            type: 'object',
-            properties: {
-              keyword: { type: 'string', description: '用户名或昵称包含的关键词，可省略' },
-              page: { type: 'integer', minimum: 1, description: '页码，默认 1' },
-              pageSize: {
-                type: 'integer',
-                minimum: 1,
-                maximum: 20,
-                description: '每页条数，默认 5，最大 20',
-              },
-            },
-            required: [],
-          },
-        },
-      },
+      name: 'search_users',
+      description: '按关键词（用户名/昵称）分页搜索系统用户，返回用户名、昵称、部门、角色与状态。',
+      schema: z.object({
+        keyword: z.string().optional().describe('用户名或昵称包含的关键词，可省略'),
+        page: z.number().int().min(1).optional().describe('页码，默认 1'),
+        pageSize: z.number().int().min(1).max(20).optional().describe('每页条数，默认 5，最大 20'),
+      }),
       run: async (args) => {
         const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
         const page = Math.max(1, Number(args.page) || 1);
@@ -212,17 +146,12 @@ export class AiToolsService {
     };
   }
 
-  private listRolesSpec(): ToolSpec {
+  private listRolesSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemRoleList,
-      def: {
-        type: 'function',
-        function: {
-          name: 'list_roles',
-          description: '查询全部角色：编码、名称、数据权限范围，以及每个角色当前拥有的权限码列表。',
-          parameters: { type: 'object', properties: {}, required: [] },
-        },
-      },
+      name: 'list_roles',
+      description: '查询全部角色：编码、名称、数据权限范围，以及每个角色当前拥有的权限码列表。',
+      schema: z.object({}),
       run: async () => {
         const roles = await this.prisma.sysRole.findMany({
           select: {
@@ -245,17 +174,12 @@ export class AiToolsService {
     };
   }
 
-  private getDeptTreeSpec(): ToolSpec {
+  private getDeptTreeSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemDeptList,
-      def: {
-        type: 'function',
-        function: {
-          name: 'get_dept_tree',
-          description: '查询部门列表（含 ID 与父子关系），创建用户指定部门时先用它拿 deptId。',
-          parameters: { type: 'object', properties: {}, required: [] },
-        },
-      },
+      name: 'get_dept_tree',
+      description: '查询部门列表（含 ID 与父子关系），创建用户指定部门时先用它拿 deptId。',
+      schema: z.object({}),
       run: async () => {
         const depts = await this.prisma.sysDept.findMany({
           select: { id: true, name: true, parentId: true },
@@ -266,18 +190,12 @@ export class AiToolsService {
     };
   }
 
-  private listPermissionsSpec(): ToolSpec {
+  private listPermissionsSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemPermissionList,
-      def: {
-        type: 'function',
-        function: {
-          name: 'list_permissions',
-          description:
-            '查询全部权限点（目录/菜单/按钮）的编码与名称，配置角色权限时用它取可用权限码。',
-          parameters: { type: 'object', properties: {}, required: [] },
-        },
-      },
+      name: 'list_permissions',
+      description: '查询全部权限点（目录/菜单/按钮）的编码与名称，配置角色权限时用它取可用权限码。',
+      schema: z.object({}),
       run: async () => {
         const perms = await this.prisma.sysPermission.findMany({
           select: { code: true, name: true, type: true },
@@ -288,59 +206,38 @@ export class AiToolsService {
     };
   }
 
-  private getAiUsageSpec(): ToolSpec {
+  private getAiUsageSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.AiUsageList,
-      def: {
-        type: 'function',
-        function: {
-          name: 'get_ai_usage',
-          description:
-            '查询 AI 用量汇总（按厂商/模型分组）：调用次数、输入/输出/总 Tokens、估算成本。',
-          parameters: { type: 'object', properties: {}, required: [] },
-        },
-      },
+      name: 'get_ai_usage',
+      description: '查询 AI 用量汇总（按厂商/模型分组）：调用次数、输入/输出/总 Tokens、估算成本。',
+      schema: z.object({}),
       run: async () => this.usage.summary(),
     };
   }
 
   // ==================== 写工具 ====================
 
-  private createUserSpec(): ToolSpec {
+  private createUserSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemUserCreate,
-      def: {
-        type: 'function',
-        function: {
-          name: 'create_user',
-          description: '创建新用户（添加员工）。调用前必须已获得用户确认。返回用户 ID 与初始密码。',
-          parameters: {
-            type: 'object',
-            properties: {
-              username: {
-                type: 'string',
-                pattern: '^[a-zA-Z0-9_]{2,32}$',
-                description: '登录账号：2-32 位字母/数字/下划线',
-              },
-              nickname: { type: 'string', description: '显示昵称，如：张三' },
-              password: {
-                type: 'string',
-                description: '初始密码，6-64 位；省略则使用默认初始密码 Abc@12345',
-              },
-              deptId: {
-                type: 'string',
-                description: '部门 ID（可先用 get_dept_tree 查询），可省略',
-              },
-              roleCodes: {
-                type: 'array',
-                items: { type: 'string' },
-                description: '角色编码列表，如 ["common"]，可省略',
-              },
-            },
-            required: ['username', 'nickname'],
-          },
-        },
-      },
+      name: 'create_user',
+      description: '创建新用户（添加员工）。调用前必须已获得用户确认。返回用户 ID 与初始密码。',
+      schema: z.object({
+        username: z
+          .string()
+          .regex(/^[a-zA-Z0-9_]{2,32}$/)
+          .describe('登录账号：2-32 位字母/数字/下划线'),
+        nickname: z.string().describe('显示昵称，如：张三'),
+        password: z
+          .string()
+          .min(6)
+          .max(64)
+          .optional()
+          .describe('初始密码，6-64 位；省略则使用默认初始密码 Abc@12345'),
+        deptId: z.string().optional().describe('部门 ID（可先用 get_dept_tree 查询），可省略'),
+        roleCodes: z.array(z.string()).optional().describe('角色编码列表，如 ["common"]，可省略'),
+      }),
       run: async (args, ctx) => {
         const username = String(args.username ?? '').trim();
         const nickname = String(args.nickname ?? '').trim();
@@ -400,28 +297,17 @@ export class AiToolsService {
     };
   }
 
-  private assignUserRolesSpec(): ToolSpec {
+  private assignUserRolesSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemUserAssignRoles,
-      def: {
-        type: 'function',
-        function: {
-          name: 'assign_user_roles',
-          description: '为指定用户全量设置角色列表（覆盖式）。调用前必须已获得用户确认。',
-          parameters: {
-            type: 'object',
-            properties: {
-              username: { type: 'string', description: '目标用户登录名' },
-              roleCodes: {
-                type: 'array',
-                items: { type: 'string' },
-                description: '角色编码全量列表，如 ["common"]；空数组表示清空角色',
-              },
-            },
-            required: ['username', 'roleCodes'],
-          },
-        },
-      },
+      name: 'assign_user_roles',
+      description: '为指定用户全量设置角色列表（覆盖式）。调用前必须已获得用户确认。',
+      schema: z.object({
+        username: z.string().describe('目标用户登录名'),
+        roleCodes: z
+          .array(z.string())
+          .describe('角色编码全量列表，如 ["common"]；空数组表示清空角色'),
+      }),
       run: async (args) => {
         const username = String(args.username ?? '').trim();
         const user = await this.prisma.sysUser.findFirst({
@@ -449,29 +335,16 @@ export class AiToolsService {
     };
   }
 
-  private setRolePermissionsSpec(): ToolSpec {
+  private setRolePermissionsSpec(): AgentToolSpec {
     return {
       permission: PermissionCode.SystemRoleAssignPerms,
-      def: {
-        type: 'function',
-        function: {
-          name: 'set_role_permissions',
-          description:
-            '为指定角色全量设置权限码集合（覆盖式，先用 list_roles 查当前集合、list_permissions 查可选码）。调用前必须已获得用户确认。',
-          parameters: {
-            type: 'object',
-            properties: {
-              roleCode: { type: 'string', description: '角色编码，如 common' },
-              permissionCodes: {
-                type: 'array',
-                items: { type: 'string' },
-                description: '权限码全量列表',
-              },
-            },
-            required: ['roleCode', 'permissionCodes'],
-          },
-        },
-      },
+      name: 'set_role_permissions',
+      description:
+        '为指定角色全量设置权限码集合（覆盖式，先用 list_roles 查当前集合、list_permissions 查可选码）。调用前必须已获得用户确认。',
+      schema: z.object({
+        roleCode: z.string().describe('角色编码，如 common'),
+        permissionCodes: z.array(z.string()).describe('权限码全量列表'),
+      }),
       run: async (args) => {
         const roleCode = String(args.roleCode ?? '').trim();
         const role = await this.prisma.sysRole.findFirst({ where: { code: roleCode } });

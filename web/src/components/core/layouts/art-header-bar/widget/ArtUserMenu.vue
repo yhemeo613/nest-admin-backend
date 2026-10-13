@@ -37,14 +37,6 @@
             <ArtSvgIcon icon="ri:user-3-line" />
             <span>{{ $t('topBar.user.userCenter') }}</span>
           </li>
-          <li class="btn-item" @click="toDocs()">
-            <ArtSvgIcon icon="ri:book-2-line" />
-            <span>{{ $t('topBar.user.docs') }}</span>
-          </li>
-          <li class="btn-item" @click="toGithub()">
-            <ArtSvgIcon icon="ri:github-line" />
-            <span>{{ $t('topBar.user.github') }}</span>
-          </li>
           <li class="btn-item" @click="lockScreen()">
             <ArtSvgIcon icon="ri:lock-line" />
             <span>{{ $t('topBar.user.lockScreen') }}</span>
@@ -64,7 +56,6 @@
   import { useRouter } from 'vue-router'
   import { ElMessageBox } from 'element-plus'
   import { useUserStore } from '@/store/modules/user'
-  import { WEB_LINKS } from '@/utils/constants'
   import { mittBus } from '@/utils/sys'
 
   defineOptions({ name: 'ArtUserMenu' })
@@ -82,20 +73,6 @@
    */
   const goPage = (path: string): void => {
     router.push(path)
-  }
-
-  /**
-   * 打开文档页面
-   */
-  const toDocs = (): void => {
-    window.open(WEB_LINKS.DOCS)
-  }
-
-  /**
-   * 打开 GitHub 页面
-   */
-  const toGithub = (): void => {
-    window.open(WEB_LINKS.GITHUB)
   }
 
   /**

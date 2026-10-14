@@ -15,20 +15,14 @@ export const staticRoutes: AppRouteRecordRaw[] = [
   // {
   //   path: '/welcome',
   //   name: 'WelcomeStatic',
-  //   component: () => import('@views/dashboard/console/index.vue'),
-  //   meta: { title: 'menus.dashboard.title' }
+  //   component: () => import('@views/index/index.vue'),
+  //   meta: { title: 'menus.outside.title' }
   // },
   {
     path: '/auth/login',
     name: 'Login',
     component: () => import('@views/auth/login/index.vue'),
     meta: { title: 'menus.login.title', isHideTab: true }
-  },
-  {
-    path: '/auth/register',
-    name: 'Register',
-    component: () => import('@views/auth/register/index.vue'),
-    meta: { title: '注册', isHideTab: true }
   },
   {
     path: '/auth/forget-password',

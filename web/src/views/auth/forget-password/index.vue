@@ -22,8 +22,6 @@
           <div class="mt-6 text-sm text-center text-g-600">
             想起来了？
             <RouterLink class="text-blue-500" :to="RoutesAlias.Login">返回登录</RouterLink>
-            ·
-            <RouterLink class="text-blue-500" :to="RoutesAlias.Register">免费开通账号</RouterLink>
           </div>
         </div>
       </div>

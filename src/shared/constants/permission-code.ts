@@ -4,9 +4,12 @@
  * 新增权限码需同步 prisma/seed.ts 的 PERMISSION_TREE。
  */
 export const PermissionCode = {
-  // 菜单级权限码（前端菜单可见性依据，seed 中登记为 MENU 类型）
-  Dashboard: 'dashboard',
-  AiChatMenu: 'ai:chat',
+  // 菜单级权限码（前端菜单可见性依据，seed 中登记为 DIR/MENU 类型）
+  SystemMenu: 'system',
+  SystemUserMenu: 'system:user',
+  SystemRoleMenu: 'system:role',
+  SystemPermissionMenu: 'system:permission',
+  SystemDeptMenu: 'system:dept',
   // 系统管理 - 用户
   SystemUserList: 'system:user:list',
   SystemUserCreate: 'system:user:create',
@@ -30,44 +33,6 @@ export const PermissionCode = {
   SystemDeptCreate: 'system:dept:create',
   SystemDeptUpdate: 'system:dept:update',
   SystemDeptDelete: 'system:dept:delete',
-  // AI
-  AiChatAsk: 'ai:chat:ask',
-  AiChatHistory: 'ai:chat:history',
-  AiDocUpload: 'ai:doc:upload',
-  AiDocDelete: 'ai:doc:delete',
-  AiUsageList: 'ai:usage:list',
-  // AI 模型配置（供应商/模型自定义）
-  AiConfigMenu: 'ai:config',
-  AiConfigList: 'ai:config:list',
-  AiConfigCreate: 'ai:config:create',
-  AiConfigUpdate: 'ai:config:update',
-  AiConfigDelete: 'ai:config:delete',
-  // SaaS 多租户运营
-  SaasTenantMenu: 'saas:tenant',
-  SaasTenantList: 'saas:tenant:list',
-  SaasTenantCreate: 'saas:tenant:create',
-  SaasTenantUpdate: 'saas:tenant:update',
-  SaasTenantDelete: 'saas:tenant:delete',
-  SaasApiKeyList: 'saas:apikey:list',
-  SaasApiKeyCreate: 'saas:apikey:create',
-  SaasApiKeyDelete: 'saas:apikey:delete',
-  // SaaS 访客会话
-  SaasConversationMenu: 'saas:conversation',
-  SaasConversationList: 'saas:conversation:list',
-  SaasConversationDetail: 'saas:conversation:detail',
-  // SaaS 知识库
-  SaasKbMenu: 'saas:kb',
-  SaasKbList: 'saas:kb:list',
-  SaasKbCreate: 'saas:kb:create',
-  SaasKbUpdate: 'saas:kb:update',
-  SaasKbDelete: 'saas:kb:delete',
-  SaasKbArticleList: 'saas:kb:article:list',
-  SaasKbArticleCreate: 'saas:kb:article:create',
-  SaasKbArticleUpdate: 'saas:kb:article:update',
-  SaasKbArticleDelete: 'saas:kb:article:delete',
-  SaasKbTagList: 'saas:kb:tag:list',
-  SaasKbTagCreate: 'saas:kb:tag:create',
-  SaasKbTagDelete: 'saas:kb:tag:delete',
 } as const;
 
 export type PermissionCodeValue = (typeof PermissionCode)[keyof typeof PermissionCode];

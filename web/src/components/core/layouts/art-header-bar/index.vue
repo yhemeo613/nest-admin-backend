@@ -109,19 +109,14 @@
           </template>
         </ElDropdown> -->
 
-        <!-- 通知按钮（角标 = 未读总数，数据源 useNoticeStore） -->
+        <!-- 通知按钮 -->
         <ArtIconButton
           v-if="shouldShowNotification"
           icon="ri:notification-2-line"
           class="notice-button relative"
           @click="visibleNotice"
         >
-          <span
-            v-if="noticeStore.totalUnread > 0"
-            class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-danger text-white text-[10px] leading-4 text-center"
-          >
-            {{ noticeStore.totalUnread > 99 ? '99+' : noticeStore.totalUnread }}
-          </span>
+          <div class="absolute top-2 right-2 size-1.5 !bg-danger rounded-full"></div>
         </ArtIconButton>
 
         <!-- 聊天按钮 -->
@@ -184,7 +179,6 @@
   import AppConfig from '@/config'
   // import { languageOptions } from '@/locales' // 国际化下拉已隐藏
   import { mittBus } from '@/utils/sys'
-  import { useNoticeStore } from '@/store/modules/notice'
   import { themeAnimation } from '@/utils/ui/animation'
   import { useCommon } from '@/hooks/core/useCommon'
   import { useHeaderBar } from '@/hooks/core/useHeaderBar'
@@ -202,7 +196,6 @@
   const settingStore = useSettingStore()
   const userStore = useUserStore()
   const menuStore = useMenuStore()
-  const noticeStore = useNoticeStore()
 
   // 顶部栏功能配置
   const {

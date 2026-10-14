@@ -34,7 +34,7 @@ nest后端框架/
 ├── prisma/               # schema.prisma（唯一事实来源）+ migrations + seed.ts
 ├── test/                 # e2e（*.e2e-spec.ts）
 ├── http/                 # REST Client 接口用例
-├── docs/架构设计方案.md   # 设计文档（权限体系、AI 基础设施详见此文档）
+├── docs/架构设计方案.md   # 设计文档（权限体系详见此文档）
 ├── web/                  # ★ 前端独立工程（art-design-pro 模板）
 └── AGENTS.md             # 本文件
 ```
@@ -53,7 +53,7 @@ nest后端框架/
 
 ### 3.1 分层红线
 
-- **依赖单向向下**：`Controller → Service → Prisma`；`modules → shared/infra`。禁止反向依赖，禁止业务模块互相 import（通信走 EventEmitter），禁止 Controller 直接访问 Prisma/AI SDK。
+- **依赖单向向下**：`Controller → Service → Prisma`；`modules → shared/infra`。禁止反向依赖，禁止业务模块互相 import（通信走 EventEmitter），禁止 Controller 直接访问 Prisma。
 - **Controller 零业务**：只做参数装配 → 调 Service → 返回；业务规则一律在 Service。
 - 所有入参必须有 DTO（class-validator 装饰 + `@ApiProperty`），全局 ValidationPipe 已开 `whitelist + forbidNonWhitelisted`，DTO 未声明的字段会被拒绝。
 
@@ -83,16 +83,9 @@ nest后端框架/
 - 跨表写入用 `prisma.$transaction`；注意 N+1（用 `include/select`）。
 - Windows 注意：后端服务运行期间 query engine DLL 被占用，`prisma generate` 会报 EPERM——先停后端再生成。
 
-### 3.6 AI 基础设施（LangChain 架构）
+### 3.6 测试要求
 
-- 业务代码**只注入 `AiGateway`（普通对话/向量化）或 `AiAgentService`（工具调用 Agent）**，禁止 `import 'openai'`、`import 'langchain'`、`@langchain/*` 等（ESLint `no-restricted-imports` 拦截；LangChain 只允许出现在 `src/infra/ai/`）。
-- 模型实例由 `AiRegistry` 解析：数据库「模型配置」优先，env 兜底；主→备降级与 `ai_call_log` 审计由门面/回调自动处理，不要绕过。
-- Agent 工具在业务层用 zod schema 声明（`AgentToolSpec`），权限折叠与 LangChain 装配由 `AiAgentService` 完成。
-- Prompt 只放 `src/infra/ai/prompts/{场景}.v{N}.md`，禁止在业务代码里拼接 prompt 字符串。
-
-### 3.7 测试要求
-
-- 单测与源码同目录 `*.spec.ts`，依赖全部 mock（AI 注入 MockChatModel / Stub 门面）；**改核心业务逻辑必须补/改对应单测**。
+- 单测与源码同目录 `*.spec.ts`，依赖全部 mock（Prisma/Redis 一律 mock）；**改核心业务逻辑必须补/改对应单测**。
 - e2e 前置：`docker compose up -d` → `pnpm prisma:migrate:test && NODE_ENV=test pnpm prisma:seed` → `pnpm test:e2e`。权限链路改动必须过 e2e。
 
 ---
@@ -103,7 +96,7 @@ nest后端框架/
 
 ### 4.1 请求与 API 层
 
-- **只用** `@/utils/http` 的 `request`（`request.get/post/put/delete<T>`）；**禁止**业务代码直接 `import axios` 或裸 `fetch`（唯一例外：SSE 流式接口用 `fetch` + `ReadableStream` 消费）。
+- **只用** `@/utils/http` 的 `request`（`request.get/post/put/delete<T>`）；**禁止**业务代码直接 `import axios` 或裸 `fetch`。
 - 封装已提供：自动携带 Token、401 自动登出（防抖）、失败重试、非 0 错误码统一抛 `HttpError` 并弹提示、**自动解包 `data`**——`request.get<T>` 返回值就是后端的 `data` 本体，不要再写 `res.data.data`。
 - API 函数写在 `src/api/*.ts`，命名 `fetchXxx`，泛型标注返回类型，URL 带 `/api/v1` 前缀；请求/响应类型放 `src/types/api/` 的 `Api.*` 命名空间（如 `Api.Auth.LoginParams`）。
 
@@ -147,7 +140,6 @@ pnpm build          # vue-tsc 类型检查 + 构建（改完必跑）
 - **常用错误码**：`40101` 未登录、`40102` 刷新令牌失效、`40301` 无权限、`10001` 登录失败（后端权威定义在 `error-code.ts`）。
 - **权限码**：`{模块}:{资源}:{动作}` 三段小写，前后端**同一套码**（后端 `permission-code.ts` ↔ 前端 `v-auth`）。
 - **菜单**：`profile.menus` 为 `DIR/MENU` 树，`path` 驱动前端组件解析，`icon` 用 iconify 格式（如 `ri:xxx`）。
-- **AI 流式**：`POST /api/v1/ai/chat/stream`，帧格式 `{ "delta": "...", "done": false }`，结束帧 `done: true`（可带 `usage`），错误帧带 `code/message`。方法是 POST，用 fetch 流式消费（`EventSource` 只支持 GET，不适用）。
 
 ---
 
@@ -167,4 +159,4 @@ pnpm dev / pnpm lint / pnpm build
 ```
 
 - Swagger：http://localhost:3000/api/docs ；健康检查：`/health`、`/ready`
-- 内置账号（仅本地验证）：`admin / Admin@123`（超管）、`demo / Demo@123`（仅 AI 对话权限）
+- 内置账号（仅本地验证）：`admin / Admin@123`（超管）、`demo / Demo@123`（普通用户，系统管理只读）

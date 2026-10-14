@@ -84,17 +84,3 @@ export function fetchUpdateProfile(data: { nickname?: string; email?: string; ph
 export function fetchChangePassword(data: { oldPassword: string; newPassword: string }) {
   return request.put<null>({ url: '/api/v1/auth/password', params: data })
 }
-
-/**
- * 租户自助注册（开通租户 + 管理员账号）
- */
-export function fetchRegister(data: {
-  tenantName: string
-  tenantCode: string
-  username: string
-  password: string
-  nickname?: string
-  email?: string
-}) {
-  return request.post<null>({ url: '/api/v1/auth/register', params: data })
-}

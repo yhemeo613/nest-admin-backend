@@ -26,14 +26,6 @@ const CODE_HTTP_MAP: Partial<Record<ErrorCode, HttpStatus>> = {
   [ErrorCode.DEPT_NOT_FOUND]: HttpStatus.NOT_FOUND,
   [ErrorCode.DEPT_HAS_CHILDREN]: HttpStatus.CONFLICT,
   [ErrorCode.DEPT_HAS_USERS]: HttpStatus.CONFLICT,
-  [ErrorCode.AI_CALL_FAILED]: HttpStatus.BAD_GATEWAY,
-  [ErrorCode.AI_BUDGET_EXCEEDED]: HttpStatus.TOO_MANY_REQUESTS,
-  [ErrorCode.AI_CONTENT_BLOCKED]: HttpStatus.BAD_REQUEST,
-  [ErrorCode.TENANT_NOT_FOUND]: HttpStatus.NOT_FOUND,
-  [ErrorCode.TENANT_CODE_EXISTS]: HttpStatus.CONFLICT,
-  [ErrorCode.API_KEY_NOT_FOUND]: HttpStatus.NOT_FOUND,
-  [ErrorCode.API_KEY_INVALID]: HttpStatus.UNAUTHORIZED,
-  [ErrorCode.CONVERSATION_NOT_FOUND]: HttpStatus.NOT_FOUND,
   [ErrorCode.INTERNAL_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
 };
 

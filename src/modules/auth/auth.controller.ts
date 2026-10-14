@@ -10,7 +10,6 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto, ProfileDto, TokenPairDto, UpdateProfileDto } from './dto/profile.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('认证')
 @Controller('auth')
@@ -32,15 +31,6 @@ export class AuthController {
   @ApiOperation({ summary: '刷新令牌（旋转，旧凭据即刻作废）' })
   refresh(@Body() dto: RefreshTokenDto): Promise<TokenPairDto> {
     return this.authService.refresh(dto);
-  }
-
-  @Public()
-  @Post('register')
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
-  @ApiOperation({ summary: '租户自助注册（开通租户 + 管理员账号，限流 3 次/分钟）' })
-  register(@Body() dto: RegisterDto): Promise<null> {
-    return this.authService.register(dto);
   }
 
   @Post('logout')

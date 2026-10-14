@@ -22,8 +22,6 @@ interface CachedUser {
   deptId: string | null;
   isSuper: boolean;
   status: Status;
-  /** 自助注册租户的归属租户 ID（非租户管理员为 null） */
-  tenantId?: string | null;
 }
 
 /**
@@ -73,7 +71,6 @@ export class JwtAuthGuard implements CanActivate {
       nickname: user.nickname,
       isSuper: user.isSuper,
       deptId: user.deptId,
-      tenantId: user.tenantId ?? null,
     };
     return true;
   }
@@ -101,17 +98,7 @@ export class JwtAuthGuard implements CanActivate {
       },
     });
     if (!user) return null;
-    // 租户管理员归属（ownerId 锚点）：随用户信息一并缓存，供服务端数据隔离
-    const ownedTenant = user.isSuper
-      ? null
-      : ((
-          await this.prisma.tenant.findFirst({
-            where: { ownerId: userId, deletedAt: null },
-            select: { id: true },
-          })
-        )?.id ?? null);
-    const userWithScope = { ...user, tenantId: ownedTenant };
-    await this.redis.setJson(cacheKey, userWithScope, USER_CACHE_TTL_SECONDS);
-    return userWithScope;
+    await this.redis.setJson(cacheKey, user, USER_CACHE_TTL_SECONDS);
+    return user;
   }
 }

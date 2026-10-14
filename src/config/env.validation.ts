@@ -19,15 +19,4 @@ export const envValidationSchema = Joi.object({
 
   THROTTLE_TTL_MS: Joi.number().default(60000),
   THROTTLE_LIMIT: Joi.number().default(100),
-
-  AI_PROVIDER: Joi.string()
-    .valid('mock', 'openai', 'deepseek', 'qwen', 'zhipu', 'moonshot', 'mimo', 'ollama')
-    .default('mock'),
-  AI_API_KEY: Joi.string().allow('').default(''),
-  AI_BASE_URL: Joi.string().allow('').default(''),
-  AI_MODEL: Joi.string().default('gpt-4o-mini'),
-  AI_EMBEDDING_MODEL: Joi.string().allow('').default(''),
-  AI_FALLBACK_MODEL: Joi.string().allow('').default(''),
-  AI_TIMEOUT_MS: Joi.number().default(60000),
-  AI_MAX_TOKENS: Joi.number().default(2048),
 });

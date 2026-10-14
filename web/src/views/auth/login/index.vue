@@ -77,12 +77,9 @@
               <ElCheckbox v-model="formData.rememberPassword">{{
                 $t('login.rememberPwd')
               }}</ElCheckbox>
-              <span class="flex gap-3">
-                <RouterLink class="text-blue-500" :to="RoutesAlias.ForgetPassword"
-                  >忘记密码</RouterLink
-                >
-                <RouterLink class="text-blue-500" :to="RoutesAlias.Register">注册账号</RouterLink>
-              </span>
+              <RouterLink class="text-blue-500 text-sm" :to="RoutesAlias.ForgetPassword"
+                >忘记密码</RouterLink
+              >
             </div>
 
             <div style="margin-top: 30px">

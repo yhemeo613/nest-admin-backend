@@ -6,17 +6,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AppConfigModule } from '@/config/config.module';
-import { AiModule } from '@/infra/ai/ai.module';
 import { LoggerModule } from '@/infra/logger/logger.module';
 import { PrismaModule } from '@/infra/prisma/prisma.module';
 import { RedisModule } from '@/infra/redis/redis.module';
-import { AiChatModule } from '@/modules/ai-chat/ai-chat.module';
-import { AiConfigModule } from '@/modules/ai-config/ai-config.module';
 import { AuthModule } from '@/modules/auth/auth.module';
-import { DashboardModule } from '@/modules/dashboard/dashboard.module';
 import { HealthModule } from '@/modules/health/health.module';
-import { NotificationModule } from '@/modules/notification/notification.module';
-import { SaasModule } from '@/modules/saas/saas.module';
 import { SystemModule } from '@/modules/system/system.module';
 import { AllExceptionsFilter } from '@/shared/filters/all-exceptions.filter';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
@@ -56,14 +50,8 @@ import { SharedModule } from '@/shared/shared.module';
         ],
       }),
     }),
-    AiModule,
     AuthModule,
     SystemModule,
-    AiChatModule,
-    AiConfigModule,
-    DashboardModule,
-    NotificationModule,
-    SaasModule,
     HealthModule,
   ],
   providers: [

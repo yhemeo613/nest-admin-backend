@@ -12,18 +12,9 @@ jest.mock('argon2', () => ({
 const argon2 = require('argon2') as { verify: jest.Mock; hash: jest.Mock };
 
 function createService() {
-  const tx = {
-    sysUser: { create: jest.fn().mockResolvedValue({ id: 'new-user' }) },
-    tenant: { create: jest.fn().mockResolvedValue({ id: 'new-tenant' }) },
-    sysUserRole: { create: jest.fn() },
-  };
   const prisma = {
-    sysUser: { findFirst: jest.fn(), update: jest.fn(), create: tx.sysUser.create },
+    sysUser: { findFirst: jest.fn(), update: jest.fn() },
     sysPermission: { findMany: jest.fn().mockResolvedValue([]) },
-    tenant: { findFirst: jest.fn(), create: tx.tenant.create },
-    sysRole: { findUnique: jest.fn() },
-    sysUserRole: { create: tx.sysUserRole.create },
-    $transaction: jest.fn(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
   };
   const redis = { del: jest.fn(), client: { get: jest.fn(), set: jest.fn() } };
   const service = new AuthService(
@@ -102,66 +93,5 @@ describe('AuthService 自助服务（资料/密码）', () => {
     await expect(
       service.changePassword('u1', { oldPassword: 'same123', newPassword: 'same123' }),
     ).rejects.toMatchObject({ bizCode: ErrorCode.BAD_REQUEST });
-  });
-});
-
-describe('AuthService.register（租户自助注册）', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  const dto = {
-    tenantName: '星辰电商',
-    tenantCode: 'xingchen',
-    username: 'boss',
-    password: 'Pass@12345',
-  };
-
-  it('租户编码已存在：抛 TENANT_CODE_EXISTS，不创建任何数据', async () => {
-    const { service, prisma } = createService();
-    prisma.tenant.findFirst.mockResolvedValue({ id: 't-exists' });
-
-    await expect(service.register(dto)).rejects.toMatchObject({
-      bizCode: ErrorCode.TENANT_CODE_EXISTS,
-    });
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('账号已存在：抛 USERNAME_EXISTS', async () => {
-    const { service, prisma } = createService();
-    prisma.tenant.findFirst.mockResolvedValue(null);
-    prisma.sysUser.findFirst.mockResolvedValue({ id: 'u-exists' });
-
-    await expect(service.register(dto)).rejects.toMatchObject({
-      bizCode: ErrorCode.USERNAME_EXISTS,
-    });
-  });
-
-  it('未初始化 tenant_admin 角色：拒绝注册（防止开通无主租户）', async () => {
-    const { service, prisma } = createService();
-    prisma.tenant.findFirst.mockResolvedValue(null);
-    prisma.sysUser.findFirst.mockResolvedValue(null);
-    prisma.sysRole.findUnique.mockResolvedValue(null);
-
-    await expect(service.register(dto)).rejects.toMatchObject({
-      bizCode: ErrorCode.BAD_REQUEST,
-    });
-  });
-
-  it('成功：事务内创建租户（ownerId 锚定管理员）+ 用户 + 分配角色', async () => {
-    const { service, prisma } = createService();
-    prisma.tenant.findFirst.mockResolvedValue(null);
-    prisma.sysUser.findFirst.mockResolvedValue(null);
-    prisma.sysRole.findUnique.mockResolvedValue({ id: 'role-tenant-admin' });
-    argon2.hash.mockResolvedValue('hash-x');
-
-    await expect(service.register(dto)).resolves.toBeNull();
-
-    expect(prisma.tenant.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ code: 'xingchen', ownerId: 'new-user' }),
-      }),
-    );
-    expect(prisma.sysUserRole.create).toHaveBeenCalledWith({
-      data: { userId: 'new-user', roleId: 'role-tenant-admin' },
-    });
   });
 });

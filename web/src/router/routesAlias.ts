@@ -5,6 +5,5 @@
 export enum RoutesAlias {
   Layout = '/index/index', // 布局容器
   Login = '/auth/login', // 登录页
-  Register = '/auth/register', // 注册页（租户自助开通）
   ForgetPassword = '/auth/forget-password' // 忘记密码引导页
 }

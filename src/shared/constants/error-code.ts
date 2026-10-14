@@ -5,7 +5,6 @@
  *   40xxx  通用 HTTP 语义错误
  *   10xxx  用户/认证域
  *   11xxx  角色/权限/部门域
- *   20xxx  AI 域
  *   50xxx  服务端内部错误
  */
 export enum ErrorCode {
@@ -36,16 +35,6 @@ export enum ErrorCode {
   DEPT_HAS_CHILDREN = 11202,
   DEPT_HAS_USERS = 11203,
 
-  AI_CALL_FAILED = 20001,
-  AI_BUDGET_EXCEEDED = 20002,
-  AI_CONTENT_BLOCKED = 20003,
-
-  TENANT_NOT_FOUND = 30001,
-  TENANT_CODE_EXISTS = 30002,
-  API_KEY_NOT_FOUND = 30101,
-  API_KEY_INVALID = 30102,
-  CONVERSATION_NOT_FOUND = 30201,
-
   INTERNAL_ERROR = 50000,
 }
 
@@ -73,13 +62,5 @@ export const ErrorMessage: Record<ErrorCode, string> = {
   [ErrorCode.DEPT_NOT_FOUND]: '部门不存在',
   [ErrorCode.DEPT_HAS_CHILDREN]: '存在子部门，无法删除',
   [ErrorCode.DEPT_HAS_USERS]: '部门下存在用户，无法删除',
-  [ErrorCode.AI_CALL_FAILED]: 'AI 服务调用失败，请稍后重试',
-  [ErrorCode.AI_BUDGET_EXCEEDED]: 'AI 调用额度已用尽',
-  [ErrorCode.AI_CONTENT_BLOCKED]: '内容未通过安全审核',
-  [ErrorCode.TENANT_NOT_FOUND]: '租户不存在',
-  [ErrorCode.TENANT_CODE_EXISTS]: '租户编码已存在',
-  [ErrorCode.API_KEY_NOT_FOUND]: 'API Key 不存在',
-  [ErrorCode.API_KEY_INVALID]: 'API Key 无效或已禁用',
-  [ErrorCode.CONVERSATION_NOT_FOUND]: '会话不存在',
   [ErrorCode.INTERNAL_ERROR]: '服务器内部错误',
 };

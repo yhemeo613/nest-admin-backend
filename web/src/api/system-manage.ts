@@ -197,15 +197,6 @@ export function fetchDeleteDept(id: string) {
   return request.del<null>({ url: `/api/v1/system/depts/${id}` })
 }
 
-// ==================== AI ====================
-
-/** AI 用量汇总 */
-export function fetchGetAiUsage() {
-  return request.get<Api.SystemManage.AiUsageItem[]>({
-    url: '/api/v1/ai/usage'
-  })
-}
-
 // ==================== 菜单（动态路由） ====================
 
 /**

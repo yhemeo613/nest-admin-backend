@@ -1,14 +1,7 @@
-import { createHash } from 'node:crypto';
-
 import { DataScope, PermType, PrismaClient, Status } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { config as loadEnv } from 'dotenv';
 
-import {
-  AiProtocol,
-  PROVIDER_BASE_URLS,
-  PROVIDER_DISPLAY_NAMES,
-} from '../src/infra/ai/ai.constants';
 // 与 src/shared/constants/permission-code.ts 保持一致（单一事实来源是代码常量）
 import { PermissionCode } from '../src/shared/constants/permission-code';
 
@@ -29,19 +22,10 @@ interface PermSeed {
 }
 
 const PERMISSION_TREE: PermSeed[] = [
-  // ---------- 工作台 ----------
-  {
-    name: '工作台',
-    code: 'dashboard',
-    type: PermType.MENU,
-    path: '/dashboard/console',
-    icon: 'ri:home-smile-line',
-    sort: 1,
-  },
   // ---------- 系统管理 ----------
   {
     name: '系统管理',
-    code: 'system',
+    code: PermissionCode.SystemMenu,
     type: PermType.DIR,
     path: '/system',
     icon: 'ri:settings-3-line',
@@ -49,9 +33,9 @@ const PERMISSION_TREE: PermSeed[] = [
   },
   {
     name: '用户管理',
-    code: 'system:user',
+    code: PermissionCode.SystemUserMenu,
     type: PermType.MENU,
-    parentCode: 'system',
+    parentCode: PermissionCode.SystemMenu,
     path: '/system/user',
     sort: 1,
   },
@@ -59,43 +43,43 @@ const PERMISSION_TREE: PermSeed[] = [
     name: '用户查询',
     code: PermissionCode.SystemUserList,
     type: PermType.BUTTON,
-    parentCode: 'system:user',
+    parentCode: PermissionCode.SystemUserMenu,
   },
   {
     name: '用户新增',
     code: PermissionCode.SystemUserCreate,
     type: PermType.BUTTON,
-    parentCode: 'system:user',
+    parentCode: PermissionCode.SystemUserMenu,
   },
   {
     name: '用户修改',
     code: PermissionCode.SystemUserUpdate,
     type: PermType.BUTTON,
-    parentCode: 'system:user',
+    parentCode: PermissionCode.SystemUserMenu,
   },
   {
     name: '用户删除',
     code: PermissionCode.SystemUserDelete,
     type: PermType.BUTTON,
-    parentCode: 'system:user',
+    parentCode: PermissionCode.SystemUserMenu,
   },
   {
     name: '重置密码',
     code: PermissionCode.SystemUserResetPassword,
     type: PermType.BUTTON,
-    parentCode: 'system:user',
+    parentCode: PermissionCode.SystemUserMenu,
   },
   {
     name: '分配角色',
     code: PermissionCode.SystemUserAssignRoles,
     type: PermType.BUTTON,
-    parentCode: 'system:user',
+    parentCode: PermissionCode.SystemUserMenu,
   },
   {
     name: '角色管理',
-    code: 'system:role',
+    code: PermissionCode.SystemRoleMenu,
     type: PermType.MENU,
-    parentCode: 'system',
+    parentCode: PermissionCode.SystemMenu,
     path: '/system/role',
     sort: 2,
   },
@@ -103,37 +87,37 @@ const PERMISSION_TREE: PermSeed[] = [
     name: '角色查询',
     code: PermissionCode.SystemRoleList,
     type: PermType.BUTTON,
-    parentCode: 'system:role',
+    parentCode: PermissionCode.SystemRoleMenu,
   },
   {
     name: '角色新增',
     code: PermissionCode.SystemRoleCreate,
     type: PermType.BUTTON,
-    parentCode: 'system:role',
+    parentCode: PermissionCode.SystemRoleMenu,
   },
   {
     name: '角色修改',
     code: PermissionCode.SystemRoleUpdate,
     type: PermType.BUTTON,
-    parentCode: 'system:role',
+    parentCode: PermissionCode.SystemRoleMenu,
   },
   {
     name: '角色删除',
     code: PermissionCode.SystemRoleDelete,
     type: PermType.BUTTON,
-    parentCode: 'system:role',
+    parentCode: PermissionCode.SystemRoleMenu,
   },
   {
     name: '分配权限',
     code: PermissionCode.SystemRoleAssignPerms,
     type: PermType.BUTTON,
-    parentCode: 'system:role',
+    parentCode: PermissionCode.SystemRoleMenu,
   },
   {
     name: '权限管理',
-    code: 'system:permission',
+    code: PermissionCode.SystemPermissionMenu,
     type: PermType.MENU,
-    parentCode: 'system',
+    parentCode: PermissionCode.SystemMenu,
     path: '/system/menu',
     sort: 3,
   },
@@ -141,31 +125,31 @@ const PERMISSION_TREE: PermSeed[] = [
     name: '权限查询',
     code: PermissionCode.SystemPermissionList,
     type: PermType.BUTTON,
-    parentCode: 'system:permission',
+    parentCode: PermissionCode.SystemPermissionMenu,
   },
   {
     name: '权限新增',
     code: PermissionCode.SystemPermissionCreate,
     type: PermType.BUTTON,
-    parentCode: 'system:permission',
+    parentCode: PermissionCode.SystemPermissionMenu,
   },
   {
     name: '权限修改',
     code: PermissionCode.SystemPermissionUpdate,
     type: PermType.BUTTON,
-    parentCode: 'system:permission',
+    parentCode: PermissionCode.SystemPermissionMenu,
   },
   {
     name: '权限删除',
     code: PermissionCode.SystemPermissionDelete,
     type: PermType.BUTTON,
-    parentCode: 'system:permission',
+    parentCode: PermissionCode.SystemPermissionMenu,
   },
   {
     name: '部门管理',
-    code: 'system:dept',
+    code: PermissionCode.SystemDeptMenu,
     type: PermType.MENU,
-    parentCode: 'system',
+    parentCode: PermissionCode.SystemMenu,
     path: '/system/dept',
     sort: 4,
   },
@@ -173,261 +157,39 @@ const PERMISSION_TREE: PermSeed[] = [
     name: '部门查询',
     code: PermissionCode.SystemDeptList,
     type: PermType.BUTTON,
-    parentCode: 'system:dept',
+    parentCode: PermissionCode.SystemDeptMenu,
   },
   {
     name: '部门新增',
     code: PermissionCode.SystemDeptCreate,
     type: PermType.BUTTON,
-    parentCode: 'system:dept',
+    parentCode: PermissionCode.SystemDeptMenu,
   },
   {
     name: '部门修改',
     code: PermissionCode.SystemDeptUpdate,
     type: PermType.BUTTON,
-    parentCode: 'system:dept',
+    parentCode: PermissionCode.SystemDeptMenu,
   },
   {
     name: '部门删除',
     code: PermissionCode.SystemDeptDelete,
     type: PermType.BUTTON,
-    parentCode: 'system:dept',
-  },
-  // ---------- AI 应用 ----------
-  {
-    name: 'AI 应用',
-    code: 'ai',
-    type: PermType.DIR,
-    path: '/ai',
-    icon: 'ri:robot-line',
-    sort: 200,
-  },
-  {
-    name: 'AI 问答',
-    code: 'ai:chat',
-    type: PermType.MENU,
-    parentCode: 'ai',
-    path: '/ai/chat',
-    sort: 1,
-  },
-  {
-    name: '发起对话',
-    code: PermissionCode.AiChatAsk,
-    type: PermType.BUTTON,
-    parentCode: 'ai:chat',
-  },
-  {
-    name: '对话历史',
-    code: PermissionCode.AiChatHistory,
-    type: PermType.BUTTON,
-    parentCode: 'ai:chat',
-  },
-  {
-    name: '用量报表',
-    code: 'ai:usage',
-    type: PermType.MENU,
-    parentCode: 'ai',
-    path: '/ai/usage',
-    sort: 3,
-  },
-  {
-    name: '用量查询',
-    code: PermissionCode.AiUsageList,
-    type: PermType.BUTTON,
-    parentCode: 'ai:usage',
-  },
-  // ---------- AI 模型配置（供应商/模型自定义） ----------
-  {
-    name: '模型配置',
-    code: PermissionCode.AiConfigMenu,
-    type: PermType.MENU,
-    parentCode: 'ai',
-    path: '/ai/config',
-    sort: 2,
-  },
-  {
-    name: '配置查询',
-    code: PermissionCode.AiConfigList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.AiConfigMenu,
-  },
-  {
-    name: '配置新增',
-    code: PermissionCode.AiConfigCreate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.AiConfigMenu,
-  },
-  {
-    name: '配置修改',
-    code: PermissionCode.AiConfigUpdate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.AiConfigMenu,
-  },
-  {
-    name: '配置删除',
-    code: PermissionCode.AiConfigDelete,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.AiConfigMenu,
-  },
-  // ---------- SaaS 多租户运营 ----------
-  {
-    name: '租户运营',
-    code: 'saas',
-    type: PermType.DIR,
-    path: '/saas',
-    icon: 'ri:building-line',
-    sort: 300,
-  },
-  {
-    name: '租户管理',
-    code: PermissionCode.SaasTenantMenu,
-    type: PermType.MENU,
-    parentCode: 'saas',
-    path: '/saas/tenant',
-    sort: 1,
-  },
-  {
-    name: '租户查询',
-    code: PermissionCode.SaasTenantList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: '租户新增',
-    code: PermissionCode.SaasTenantCreate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: '租户修改',
-    code: PermissionCode.SaasTenantUpdate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: '租户删除',
-    code: PermissionCode.SaasTenantDelete,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: 'Key 查询',
-    code: PermissionCode.SaasApiKeyList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: 'Key 创建',
-    code: PermissionCode.SaasApiKeyCreate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: 'Key 删除',
-    code: PermissionCode.SaasApiKeyDelete,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasTenantMenu,
-  },
-  {
-    name: '访客会话',
-    code: PermissionCode.SaasConversationMenu,
-    type: PermType.MENU,
-    parentCode: 'saas',
-    path: '/saas/conversation',
-    sort: 2,
-  },
-  {
-    name: '会话查询',
-    code: PermissionCode.SaasConversationList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasConversationMenu,
-  },
-  {
-    name: '会话详情',
-    code: PermissionCode.SaasConversationDetail,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasConversationMenu,
-  },
-  // ---------- SaaS 知识库 ----------
-  {
-    name: '知识库',
-    code: PermissionCode.SaasKbMenu,
-    type: PermType.MENU,
-    parentCode: 'saas',
-    path: '/saas/kb',
-    icon: 'ri:book-2-line',
-    sort: 3,
-  },
-  {
-    name: '知识库查询',
-    code: PermissionCode.SaasKbList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '知识库新增',
-    code: PermissionCode.SaasKbCreate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '知识库修改',
-    code: PermissionCode.SaasKbUpdate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '知识库删除',
-    code: PermissionCode.SaasKbDelete,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '文章查询',
-    code: PermissionCode.SaasKbArticleList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '文章新增',
-    code: PermissionCode.SaasKbArticleCreate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '文章修改',
-    code: PermissionCode.SaasKbArticleUpdate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '文章删除',
-    code: PermissionCode.SaasKbArticleDelete,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '标签查询',
-    code: PermissionCode.SaasKbTagList,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '标签新增',
-    code: PermissionCode.SaasKbTagCreate,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
-  },
-  {
-    name: '标签删除',
-    code: PermissionCode.SaasKbTagDelete,
-    type: PermType.BUTTON,
-    parentCode: PermissionCode.SaasKbMenu,
+    parentCode: PermissionCode.SystemDeptMenu,
   },
 ];
 
 async function seedPermissions(): Promise<Map<string, string>> {
   const codeToId = new Map<string, string>();
+  // 清理已下线的功能遗留权限码（工作台/AI/SaaS 客服等），避免超管菜单残留死链
+  const validCodes = new Set(PERMISSION_TREE.map((n) => n.code));
+  const existing = await prisma.sysPermission.findMany({ select: { id: true, code: true } });
+  const staleIds = existing.filter((p) => !validCodes.has(p.code)).map((p) => p.id);
+  if (staleIds.length > 0) {
+    await prisma.sysRolePermission.deleteMany({ where: { permissionId: { in: staleIds } } });
+    await prisma.sysPermission.deleteMany({ where: { id: { in: staleIds } } });
+    console.log(`    清理遗留权限码 ${staleIds.length} 个`);
+  }
   // 两遍插入：先 upsert 所有节点，再回填父子关系
   for (const node of PERMISSION_TREE) {
     const saved = await prisma.sysPermission.upsert({
@@ -498,12 +260,17 @@ async function seedRoles(allPermIds: string[]): Promise<void> {
     update: {},
     create: { code: 'common', name: '普通用户', dataScope: DataScope.SELF, sort: 10 },
   });
-  // 菜单码 + 按钮码：菜单码用于前端菜单可见性，按钮码用于接口鉴权
+  // 菜单码 + 查询按钮码：菜单码用于前端菜单可见性，按钮码用于接口鉴权（只读演示角色）
   const commonPermCodes = [
-    PermissionCode.Dashboard,
-    PermissionCode.AiChatMenu,
-    PermissionCode.AiChatAsk,
-    PermissionCode.AiChatHistory,
+    PermissionCode.SystemMenu,
+    PermissionCode.SystemUserMenu,
+    PermissionCode.SystemRoleMenu,
+    PermissionCode.SystemPermissionMenu,
+    PermissionCode.SystemDeptMenu,
+    PermissionCode.SystemUserList,
+    PermissionCode.SystemRoleList,
+    PermissionCode.SystemPermissionList,
+    PermissionCode.SystemDeptList,
   ];
   const commonPerms = await prisma.sysPermission.findMany({
     where: { code: { in: commonPermCodes } },
@@ -513,45 +280,12 @@ async function seedRoles(allPermIds: string[]): Promise<void> {
     data: commonPerms.map((p) => ({ roleId: common.id, permissionId: p.id })),
   });
 
-  // 租户管理员：自助注册时分配，只能使用工作台/AI 问答/知识库/会话/自家 API Key
-  const tenantAdmin = await prisma.sysRole.upsert({
-    where: { code: 'tenant_admin' },
-    update: { dataScope: DataScope.SELF },
-    create: { code: 'tenant_admin', name: '租户管理员', dataScope: DataScope.SELF, sort: 20 },
-  });
-  const tenantAdminPermCodes = [
-    PermissionCode.Dashboard,
-    PermissionCode.AiChatMenu,
-    PermissionCode.AiChatAsk,
-    PermissionCode.AiChatHistory,
-    PermissionCode.SaasTenantMenu,
-    PermissionCode.SaasTenantList,
-    PermissionCode.SaasApiKeyList,
-    PermissionCode.SaasApiKeyCreate,
-    PermissionCode.SaasApiKeyDelete,
-    PermissionCode.SaasKbMenu,
-    PermissionCode.SaasKbList,
-    PermissionCode.SaasKbCreate,
-    PermissionCode.SaasKbUpdate,
-    PermissionCode.SaasKbDelete,
-    PermissionCode.SaasKbArticleList,
-    PermissionCode.SaasKbArticleCreate,
-    PermissionCode.SaasKbArticleUpdate,
-    PermissionCode.SaasKbArticleDelete,
-    PermissionCode.SaasKbTagList,
-    PermissionCode.SaasKbTagCreate,
-    PermissionCode.SaasKbTagDelete,
-    PermissionCode.SaasConversationMenu,
-    PermissionCode.SaasConversationList,
-    PermissionCode.SaasConversationDetail,
-  ];
-  const tenantAdminPerms = await prisma.sysPermission.findMany({
-    where: { code: { in: tenantAdminPermCodes } },
-  });
-  await prisma.sysRolePermission.deleteMany({ where: { roleId: tenantAdmin.id } });
-  await prisma.sysRolePermission.createMany({
-    data: tenantAdminPerms.map((p) => ({ roleId: tenantAdmin.id, permissionId: p.id })),
-  });
+  // 清理历史遗留的租户管理员角色（客服系统已下线）
+  const legacyRole = await prisma.sysRole.findUnique({ where: { code: 'tenant_admin' } });
+  if (legacyRole) {
+    await prisma.sysRolePermission.deleteMany({ where: { roleId: legacyRole.id } });
+    await prisma.sysRole.delete({ where: { id: legacyRole.id } });
+  }
 }
 
 async function seedUsers(rootDeptId: string): Promise<void> {
@@ -594,167 +328,6 @@ async function seedUsers(rootDeptId: string): Promise<void> {
   });
 }
 
-/**
- * 从 env 引导创建默认供应商与模型（幂等，固定 ID）。
- * 数据库配置优先于 env：创建后可在「模型配置」页自由增删改，env 仅作初始值。
- */
-async function seedAiProvider(): Promise<void> {
-  const providerKey = process.env.AI_PROVIDER ?? '';
-  const model = process.env.AI_MODEL ?? '';
-  if (!model || providerKey === 'mock' || !providerKey) return;
-
-  const baseUrl = process.env.AI_BASE_URL || PROVIDER_BASE_URLS[providerKey] || '';
-  if (!baseUrl) return;
-
-  const protocol = providerKey === 'ollama' ? AiProtocol.OLLAMA : AiProtocol.OPENAI_COMPAT;
-  const maxOutput = Number(process.env.AI_MAX_TOKENS) || 2048;
-
-  const provider = await prisma.aiProvider.upsert({
-    where: { id: 'seed-ai-provider-env' },
-    update: {
-      name: PROVIDER_DISPLAY_NAMES[providerKey] ?? providerKey,
-      protocol,
-      baseUrl,
-      // env 有密钥才覆盖，避免部署环境把库里已配置的 Key 清空
-      ...(process.env.AI_API_KEY ? { apiKey: process.env.AI_API_KEY } : {}),
-    },
-    create: {
-      id: 'seed-ai-provider-env',
-      name: PROVIDER_DISPLAY_NAMES[providerKey] ?? providerKey,
-      protocol,
-      baseUrl,
-      apiKey: process.env.AI_API_KEY || null,
-      remark: '由 seed 从 .env 引导创建（AI_PROVIDER / AI_MODEL），可在页面中修改',
-      sort: 0,
-    },
-  });
-
-  await prisma.aiModel.upsert({
-    where: { id: 'seed-ai-model-default' },
-    update: { name: model, maxOutput, isDefault: true },
-    create: {
-      id: 'seed-ai-model-default',
-      providerId: provider.id,
-      name: model,
-      maxOutput,
-      isDefault: true,
-      sort: 0,
-    },
-  });
-
-  const fallback = process.env.AI_FALLBACK_MODEL ?? '';
-  if (fallback && fallback !== model) {
-    await prisma.aiModel.upsert({
-      where: { id: 'seed-ai-model-fallback' },
-      update: { name: fallback, isDefault: false },
-      create: {
-        id: 'seed-ai-model-fallback',
-        providerId: provider.id,
-        name: fallback,
-        maxOutput,
-        isDefault: false,
-        sort: 1,
-      },
-    });
-  }
-}
-
-/**
- * 站内通知样本（固定 ID 幂等；重复 seed 不覆盖已读状态）。
- */
-async function seedNotifications(): Promise<void> {
-  const admin = await prisma.sysUser.findUnique({ where: { username: 'admin' } });
-  const demo = await prisma.sysUser.findUnique({ where: { username: 'demo' } });
-  if (!admin || !demo) return;
-
-  const rows = [
-    {
-      id: 'seed-notify-1',
-      userId: admin.id,
-      type: 'NOTICE',
-      title: '欢迎使用权限中枢',
-      content: '系统已就绪：可从左侧菜单进入用户、角色、权限与 AI 模型配置。',
-      link: '/dashboard/console',
-    },
-    {
-      id: 'seed-notify-2',
-      userId: admin.id,
-      type: 'MESSAGE',
-      title: '模型配置已接入',
-      content: '供应商与模型现在可在「模型配置」页自定义，保存后即时生效。',
-      link: '/ai/config',
-    },
-    {
-      id: 'seed-notify-3',
-      userId: admin.id,
-      type: 'TODO',
-      title: '核对近 7 天 AI 成本',
-      content: '（示例待办）到用量报表检查成本是否在预算内。',
-      link: '/ai/usage',
-      readAt: new Date('2026-10-01T00:00:00'),
-    },
-    {
-      id: 'seed-notify-4',
-      userId: demo.id,
-      type: 'NOTICE',
-      title: 'AI 问答已开放',
-      content: '你可以向米答提问了，支持流式输出与多轮对话。',
-      link: '/ai/chat',
-    },
-    {
-      id: 'seed-notify-5',
-      userId: demo.id,
-      type: 'MESSAGE',
-      title: '演示账号说明',
-      content: 'demo 账号仅拥有 AI 对话相关权限。',
-      link: null,
-    },
-  ];
-
-  for (const row of rows) {
-    // update 不带 readAt：重复 seed 不会重置用户已读状态
-    await prisma.sysNotification.upsert({
-      where: { id: row.id },
-      update: { title: row.title, content: row.content, link: row.link, userId: row.userId },
-      create: { ...row, readAt: (row as { readAt?: Date }).readAt ?? null },
-    });
-  }
-}
-
-/**
- * 演示租户 + 演示 API Key（仅本地验证，固定 ID 幂等）。
- * 明文 Key 与内置账号一样仅用于本地联调，生产环境严禁 seed 造 Key。
- */
-async function seedSaasTenant(): Promise<void> {
-  await prisma.tenant.upsert({
-    where: { id: 'seed-tenant-demo' },
-    update: {},
-    create: {
-      id: 'seed-tenant-demo',
-      name: '演示租户',
-      code: 'demo-shop',
-      contactName: '演示联系人',
-      contactEmail: 'demo@example.com',
-      remark: '由 seed 创建的本地演示租户',
-      status: Status.ENABLED,
-    },
-  });
-
-  const plainKey = 'sk-local-demo-001';
-  await prisma.tenantApiKey.upsert({
-    where: { id: 'seed-apikey-demo' },
-    update: {},
-    create: {
-      id: 'seed-apikey-demo',
-      tenantId: 'seed-tenant-demo',
-      name: '本地演示 Key',
-      keyHash: createHash('sha256').update(plainKey).digest('hex'),
-      keyPrefix: plainKey.slice(0, 8),
-      status: Status.ENABLED,
-    },
-  });
-}
-
 async function main(): Promise<void> {
   console.log('==> 初始化权限树...');
   const codeToId = await seedPermissions();
@@ -765,15 +338,7 @@ async function main(): Promise<void> {
   await seedRoles([...codeToId.values()]);
   console.log('==> 初始化用户...');
   await seedUsers(rootDeptId);
-  console.log('==> 初始化 AI 供应商配置...');
-  await seedAiProvider();
-  console.log('==> 初始化站内通知样本...');
-  await seedNotifications();
-  console.log('==> 初始化 SaaS 演示租户...');
-  await seedSaasTenant();
-  console.log(
-    '==> 完成。内置账号：admin/Admin@123（超管）、demo/Demo@123（普通用户）；本地演示 API Key：sk-local-demo-001',
-  );
+  console.log('==> 完成。内置账号：admin/Admin@123（超管）、demo/Demo@123（普通用户）');
 }
 
 main()

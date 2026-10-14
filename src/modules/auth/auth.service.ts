@@ -24,7 +24,6 @@ import {
   UpdateProfileDto,
 } from './dto/profile.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -119,67 +118,6 @@ export class AuthService {
       permissions: permCodes,
       menus,
     };
-  }
-
-  /**
-   * 租户自助注册（闭环入口）：
-   * 一次事务完成「开通租户 + 创建管理员账号 + 分配租户管理员角色」。
-   * 租户 ownerId 锚定管理员 → JwtAuthGuard 据此做服务端数据隔离。
-   */
-  async register(dto: RegisterDto): Promise<null> {
-    const [tenantExists, userExists] = await Promise.all([
-      this.prisma.tenant.findFirst({
-        where: { code: dto.tenantCode, deletedAt: null },
-        select: { id: true },
-      }),
-      this.prisma.sysUser.findFirst({
-        where: { username: dto.username, deletedAt: null },
-        select: { id: true },
-      }),
-    ]);
-    if (tenantExists) throw new BusinessException(ErrorCode.TENANT_CODE_EXISTS);
-    if (userExists) throw new BusinessException(ErrorCode.USERNAME_EXISTS);
-
-    const tenantAdminRole = await this.prisma.sysRole.findUnique({
-      where: { code: 'tenant_admin' },
-      select: { id: true },
-    });
-    if (!tenantAdminRole) {
-      throw new BusinessException(
-        ErrorCode.BAD_REQUEST,
-        '系统未初始化租户管理员角色，请联系平台管理员',
-      );
-    }
-
-    const passwordHash = await argon2.hash(dto.password);
-    await this.prisma.$transaction(async (tx) => {
-      const user = await tx.sysUser.create({
-        data: {
-          username: dto.username,
-          password: passwordHash,
-          nickname: dto.nickname || dto.username,
-          email: dto.email ?? null,
-          isSuper: false,
-          status: Status.ENABLED,
-          createdBy: 'register',
-        },
-      });
-      await tx.tenant.create({
-        data: {
-          name: dto.tenantName,
-          code: dto.tenantCode,
-          contactName: dto.nickname ?? null,
-          contactEmail: dto.email ?? null,
-          ownerId: user.id,
-          createdBy: user.id,
-        },
-      });
-      await tx.sysUserRole.create({ data: { userId: user.id, roleId: tenantAdminRole.id } });
-    });
-    this.logger.log(
-      `租户自助注册成功: ${dto.tenantName}(${dto.tenantCode}) 管理员=${dto.username}`,
-    );
-    return null;
   }
 
   /** 修改自己的资料（昵称/邮箱/手机号），同步清用户缓存保证顶部信息即时生效 */

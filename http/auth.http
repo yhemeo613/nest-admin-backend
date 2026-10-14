@@ -12,7 +12,7 @@ Content-Type: application/json
   "password": "Admin@123"
 }
 
-### 登录（普通用户：仅 AI 对话权限）
+### 登录（普通用户：系统管理只读）
 POST {{host}}/auth/login
 Content-Type: application/json
 

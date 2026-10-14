@@ -23,14 +23,4 @@ export default () => ({
   log: {
     level: process.env.LOG_LEVEL ?? 'info',
   },
-  ai: {
-    provider: process.env.AI_PROVIDER ?? 'mock',
-    apiKey: process.env.AI_API_KEY ?? '',
-    baseUrl: process.env.AI_BASE_URL ?? '',
-    model: process.env.AI_MODEL ?? 'gpt-4o-mini',
-    embeddingModel: process.env.AI_EMBEDDING_MODEL ?? '',
-    fallbackModel: process.env.AI_FALLBACK_MODEL ?? '',
-    timeoutMs: parseInt(process.env.AI_TIMEOUT_MS ?? '60000', 10),
-    maxTokens: parseInt(process.env.AI_MAX_TOKENS ?? '2048', 10),
-  },
 });

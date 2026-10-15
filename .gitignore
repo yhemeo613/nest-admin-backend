@@ -5,16 +5,19 @@ coverage/
 .DS_Store
 .idea/
 
-# 环境文件不入库（.env.example 除外；web/ 的 VITE_* 无密钥，入库保证开箱可跑）
+# 环境文件不入库（.env.example 除外；apps/web/ 的 VITE_* 无密钥，入库保证开箱可跑）
 .env
 .env.*
 !.env.example
-!web/.env
-!web/.env.development
-!web/.env.production
+!apps/web/.env
+!apps/web/.env.development
+!apps/web/.env.production
+
+# Turbo
+.turbo/
 
 # Prisma 本地
-prisma/*.db
+apps/server/prisma/*.db
 
 # 浏览器自动化页面快照（本地临时产物）
 .playwright-mcp/

@@ -1,11 +1,12 @@
-node_modules
-dist
-coverage
+**/node_modules
+**/dist
+**/coverage
 .git
 .vscode
 docs
-http
-test
+apps/web
+**/http
+**/test
 *.log
 .env
 .env.*

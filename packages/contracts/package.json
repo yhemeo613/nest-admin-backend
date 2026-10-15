@@ -1,0 +1,20 @@
+{
+  "name": "@nestperm/contracts",
+  "version": "1.0.0",
+  "description": "前后端共享契约：权限码常量 + 响应信封/分页类型（唯一事实来源）",
+  "private": true,
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "echo \"contracts 无独立 lint（纯类型/常量）\""
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2"
+  }
+}

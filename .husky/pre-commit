@@ -1,1 +1,3 @@
 pnpm lint-staged
+pnpm --filter @nestperm/server exec lint-staged
+pnpm --filter @nestperm/web exec lint-staged

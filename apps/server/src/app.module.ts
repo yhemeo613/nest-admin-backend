@@ -11,6 +11,7 @@ import { PrismaModule } from '@/infra/prisma/prisma.module';
 import { RedisModule } from '@/infra/redis/redis.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { HealthModule } from '@/modules/health/health.module';
+import { ReviewModule } from '@/modules/review/review.module';
 import { SystemModule } from '@/modules/system/system.module';
 import { AllExceptionsFilter } from '@/shared/filters/all-exceptions.filter';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
@@ -52,6 +53,7 @@ import { SharedModule } from '@/shared/shared.module';
     }),
     AuthModule,
     SystemModule,
+    ReviewModule,
     HealthModule,
   ],
   providers: [

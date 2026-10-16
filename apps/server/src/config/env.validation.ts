@@ -19,4 +19,19 @@ export const envValidationSchema = Joi.object({
 
   THROTTLE_TTL_MS: Joi.number().default(60000),
   THROTTLE_LIMIT: Joi.number().default(100),
+
+  // 代码评审（NestReview）
+  REVIEW_CRYPTO_KEY: Joi.string()
+    .min(32)
+    .allow('')
+    .optional()
+    .description(
+      '评审域密文密钥（32+ 字符）；缺省时派生自 JWT_ACCESS_SECRET（仅建议生产显式配置）',
+    ),
+  OCR_BIN_PATH: Joi.string().default('ocr'),
+  REVIEW_WORKSPACE_DIR: Joi.string().default('workspaces/review'),
+  REVIEW_TASK_TIMEOUT_MS: Joi.number().positive().default(1800000),
+  REVIEW_WORKER_CONCURRENCY: Joi.number().positive().default(1),
+  // e2e/包装器：附加在 ocr bin 后的前缀参数（JSON 数组，如 ["test/fake-ocr.js"]）
+  OCR_BIN_ARGS_PREFIX: Joi.string().allow('').optional(),
 });

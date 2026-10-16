@@ -58,6 +58,8 @@ declare namespace Api {
       path: string | null
       icon: string | null
       sort: number
+      /** 隐藏菜单：路由注册但不进侧栏（详情页） */
+      isHidden: boolean
       children: MenuNode[]
     }
 
@@ -148,6 +150,165 @@ declare namespace Api {
       status: Api.Common.EnableStatus
       createdAt: string
       children?: DeptItem[]
+    }
+  }
+
+  /** 代码评审（NestReview） */
+  namespace Review {
+    type Platform = 'GITLAB' | 'GITHUB'
+    type TaskMode = 'RANGE' | 'COMMIT' | 'MR'
+    type TaskStatus =
+      'PENDING' | 'PREPARING' | 'RUNNING' | 'EVALUATING' | 'SUCCESS' | 'FAILED' | 'CANCELLED'
+    type GateStatus = 'PASS' | 'FAIL' | 'SKIPPED'
+    type FindingStatus = 'OPEN' | 'FIXED' | 'IGNORED' | 'RESOLVED'
+
+    interface ModelItem {
+      id: string
+      name: string
+      provider: string
+      protocol: string
+      baseUrl: string
+      model: string
+      extraBody: Record<string, unknown> | null
+      isDefault: boolean
+      status: Api.Common.EnableStatus
+      hasApiKey: boolean
+      createdBy: string | null
+      createdAt: string
+      updatedAt: string
+    }
+
+    interface RepoItem {
+      id: string
+      name: string
+      platform: Platform
+      gitUrl: string
+      defaultBranch: string
+      hasCredential: boolean
+      workspaceStatus: 'NONE' | 'READY' | 'ERROR'
+      lastSyncAt: string | null
+      createdAt: string
+    }
+
+    interface TaskItem {
+      id: string
+      repoId: string
+      repoName: string | null
+      modelId: string | null
+      modelName: string | null
+      mode: TaskMode
+      fromRef: string | null
+      toRef: string | null
+      commitSha: string | null
+      mrUrl: string | null
+      mrState: string | null
+      mrDiscussionUrl: string | null
+      requirementBackground: string | null
+      status: TaskStatus
+      stage: string
+      progress: number
+      gateStatus: GateStatus | null
+      gateDetail: {
+        maxCritical: number | null
+        maxHigh: number | null
+        critical: number
+        high: number
+        reasons: string[]
+      } | null
+      stats: {
+        severityCount?: Record<string, number>
+        comments?: number
+        filesReviewed?: number | null
+        totalTokens?: number | null
+        elapsed?: string | null
+        toolCalls?: number | null
+      } | null
+      sessionId: string | null
+      error: string | null
+      startedAt: string | null
+      finishedAt: string | null
+      createdBy: string | null
+      createdAt: string
+      severityCount: Record<string, number>
+    }
+
+    interface FindingItem {
+      id: string
+      taskId: string
+      path: string
+      startLine: number
+      endLine: number
+      content: string
+      thinking: string | null
+      category: string
+      severity: string
+      suggestionCode: string | null
+      existingCode: string | null
+      fingerprint: string
+      status: FindingStatus
+      isNew: boolean
+      createdAt: string
+    }
+
+    interface TraceCallItem {
+      id: string
+      seq: number
+      requestNo: number | null
+      taskType: string | null
+      filePath: string | null
+      model: string | null
+      durationMs: number
+      statusCode: number | null
+      tokensIn: number | null
+      tokensOut: number | null
+      createdAt: string
+    }
+
+    interface GateRuleItem {
+      id: string
+      repoId: string | null
+      repoName: string | null
+      maxCritical: number | null
+      maxHigh: number | null
+      createdAt: string
+      updatedAt: string
+    }
+
+    interface NotifItem {
+      id: string
+      type: 'TASK_FINISHED' | 'TASK_FAILED' | 'GATE_FAILED'
+      taskId: string | null
+      title: string
+      content: string | null
+      isRead: boolean
+      createdAt: string
+    }
+
+    interface DashboardStats {
+      tasks30d: number
+      successRate30d: number
+      openFindings: number
+      gatePassRate30d: number
+      totalTokens30d: number
+      severityTrend: Array<{
+        date: string
+        critical: number
+        high: number
+        medium: number
+        low: number
+      }>
+      categoryDist: Array<{ category: string; count: number }>
+      dailyTokens: Array<{ date: string; tokens: number }>
+      recentTasks: Array<{
+        id: string
+        repoName: string | null
+        status: string
+        gateStatus: string | null
+        comments: number
+        startedAt: string | null
+        finishedAt: string | null
+        createdAt: string
+      }>
     }
   }
 }

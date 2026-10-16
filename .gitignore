@@ -23,3 +23,8 @@ apps/server/prisma/*.db
 .playwright-mcp/
 .zcode/
 
+
+# AI 代码评审平台本地产物
+apps/server/workspaces/
+open-code-review/
+ocr-*.json

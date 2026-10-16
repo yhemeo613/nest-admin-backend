@@ -20,6 +20,8 @@ export class ProfileMenuDto {
   @ApiProperty({ nullable: true }) path: string | null;
   @ApiProperty({ nullable: true }) icon: string | null;
   @ApiProperty() sort: number;
+  @ApiProperty({ description: '隐藏菜单：路由注册但不进侧栏（详情页）' })
+  isHidden: boolean;
   @ApiProperty({ type: () => [ProfileMenuDto] }) children: ProfileMenuDto[];
 }
 

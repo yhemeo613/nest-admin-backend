@@ -35,6 +35,20 @@ export enum ErrorCode {
   DEPT_HAS_CHILDREN = 11202,
   DEPT_HAS_USERS = 11203,
 
+  // 代码评审域（12xxx）
+  REVIEW_REPO_NOT_FOUND = 12001,
+  REVIEW_MODEL_NOT_FOUND = 12002,
+  REVIEW_TASK_NOT_FOUND = 12003,
+  REVIEW_TASK_NOT_CANCELLABLE = 12004, // 任务已终态，不可取消/操作
+  REVIEW_FINDING_NOT_FOUND = 12005,
+  REVIEW_GATE_RULE_NOT_FOUND = 12006,
+  REVIEW_GATE_CONFLICT = 12007, // 同作用域已有规则
+  REVIEW_OCR_BINARY_MISSING = 12008, // ocr 二进制不可用
+  REVIEW_MR_URL_INVALID = 12009, // MR/PR 链接无法解析
+  REVIEW_PUBLISH_NOT_CONFIGURED = 12010, // 任务未配置 MR/PR，无法回写
+  REVIEW_MODEL_TEST_FAILED = 12011, // 模型连通性测试失败
+  REVIEW_CRYPTO_KEY_INVALID = 12012, // 解密失败（密钥不匹配或密文损坏）
+
   INTERNAL_ERROR = 50000,
 }
 
@@ -62,5 +76,17 @@ export const ErrorMessage: Record<ErrorCode, string> = {
   [ErrorCode.DEPT_NOT_FOUND]: '部门不存在',
   [ErrorCode.DEPT_HAS_CHILDREN]: '存在子部门，无法删除',
   [ErrorCode.DEPT_HAS_USERS]: '部门下存在用户，无法删除',
+  [ErrorCode.REVIEW_REPO_NOT_FOUND]: '评审仓库不存在',
+  [ErrorCode.REVIEW_MODEL_NOT_FOUND]: '模型配置不存在',
+  [ErrorCode.REVIEW_TASK_NOT_FOUND]: '评审任务不存在',
+  [ErrorCode.REVIEW_TASK_NOT_CANCELLABLE]: '任务已结束，无法执行该操作',
+  [ErrorCode.REVIEW_FINDING_NOT_FOUND]: '评审发现不存在',
+  [ErrorCode.REVIEW_GATE_RULE_NOT_FOUND]: '红线规则不存在',
+  [ErrorCode.REVIEW_GATE_CONFLICT]: '该作用域已存在红线规则',
+  [ErrorCode.REVIEW_OCR_BINARY_MISSING]: '评审引擎（ocr）不可用，请检查 OCR_BIN_PATH 配置',
+  [ErrorCode.REVIEW_MR_URL_INVALID]: 'MR/PR 链接无法解析',
+  [ErrorCode.REVIEW_PUBLISH_NOT_CONFIGURED]: '任务未配置 MR/PR 链接，无法回写',
+  [ErrorCode.REVIEW_MODEL_TEST_FAILED]: '模型连通性测试失败',
+  [ErrorCode.REVIEW_CRYPTO_KEY_INVALID]: '密文解密失败（密钥不匹配或数据损坏）',
   [ErrorCode.INTERNAL_ERROR]: '服务器内部错误',
 };

@@ -84,6 +84,7 @@ model SysPermission {
   icon      String?
   sort      Int      @default(0)
   status    Status   @default(ENABLED)
+  isHidden  Boolean  @default(false) @map("is_hidden") // 隐藏菜单（详情页等，路由注册但不进侧栏）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -150,3 +151,221 @@ model SysRoleDept {
   @@map("sys_role_dept")
 }
 
+
+// ==================== 代码评审（NestReview） ====================
+
+enum ReviewPlatform {
+  GITLAB
+  GITHUB
+}
+
+enum ReviewTaskMode {
+  RANGE // 分支区间 from..to
+  COMMIT // 单提交
+  MR // MR/PR 链接（解析后按分支区间执行）
+}
+
+enum ReviewTaskStatus {
+  PENDING // 已入队
+  PREPARING // 工作区准备中（clone/fetch）
+  RUNNING // OCR 执行中
+  EVALUATING // 结果解析 + 红线评估
+  SUCCESS // 正常完成
+  FAILED // 异常终止
+  CANCELLED // 已取消
+}
+
+enum ReviewGateStatus {
+  PASS
+  FAIL
+  SKIPPED // 未配置规则或无评论
+}
+
+enum ReviewFindingStatus {
+  OPEN
+  FIXED
+  IGNORED
+  RESOLVED
+}
+
+enum ReviewNotifType {
+  TASK_FINISHED
+  TASK_FAILED
+  GATE_FAILED
+}
+
+model ReviewRepo {
+  id              String          @id @default(uuid())
+  name            String // 显示名
+  platform        ReviewPlatform
+  gitUrl          String          @unique // https/ssh clone 地址
+  defaultBranch   String          @default("main") @map("default_branch")
+  credentialEnc   String?         @map("credential_enc") // HTTPS 凭证密文（user:token，AES-256-GCM）
+  workspaceStatus String          @default("NONE") @map("workspace_status") // NONE | READY | ERROR
+  lastSyncAt      DateTime?       @map("last_sync_at")
+  createdBy       String?         @map("created_by")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+
+  tasks ReviewTask[]
+  gates ReviewGateRule[]
+
+  @@index([deletedAt])
+  @@map("review_repo")
+}
+
+model ReviewModel {
+  id         String   @id @default(uuid())
+  name       String // 显示名，如 MiMo / DeepSeek
+  provider   String // anthropic | openai | dashscope | volcengine | deepseek | custom...
+  protocol   String   @default("openai") // anthropic | openai | openai-responses
+  baseUrl    String   @map("base_url") // OpenAI 兼容 endpoint 或 Anthropic endpoint
+  apiKeyEnc  String   @map("api_key_enc") // 密文
+  model      String // 模型标识，如 qwen-max / deepseek-chat
+  extraBody  Json?    @map("extra_body") // 注入 LLM 请求的额外 JSON（如 thinking 开关）
+  isDefault  Boolean  @default(false) @map("is_default")
+  status     Status   @default(ENABLED)
+  createdBy  String?  @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  tasks ReviewTask[]
+
+  @@index([deletedAt])
+  @@map("review_model")
+}
+
+model ReviewTask {
+  id                    String            @id @default(uuid())
+  repoId                String            @map("repo_id")
+  modelId               String?           @map("model_id")
+  mode                  ReviewTaskMode
+  fromRef               String?           @map("from_ref") // RANGE 基准分支
+  toRef                 String?           @map("to_ref") // RANGE 目标分支
+  commitSha             String?           @map("commit_sha") // COMMIT 模式
+  mrUrl                 String?           @map("mr_url") // MR/PR 链接（回写目标）
+  mrIid                 Int?              @map("mr_iid")
+  platformProject       String?           @map("platform_project") // GitLab project id 或 owner/repo
+  mrState               String?           @map("mr_state") // 回写状态：NONE | PUBLISHED | FAILED
+  mrDiscussionUrl       String?           @map("mr_discussion_url") // 回写后的汇总评论链接
+  requirementBackground String?           @map("requirement_background")
+  status                ReviewTaskStatus  @default(PENDING)
+  stage                 String            @default("queued") // queued | preparing | running | evaluating | publishing | done
+  progress              Int               @default(0) // 0-100
+  sessionId             String?           @map("session_id") // OCR session id
+  resultPath            String?           @map("result_path") // result.json
+  diffPath              String?           @map("diff_path") // diff.patch
+  homeDir               String?           @map("home_dir") // 任务级 HOME
+  gateStatus            ReviewGateStatus? @map("gate_status")
+  gateDetail            Json?             @map("gate_detail") // { maxCritical, maxHigh, critical, high, reasons[] }
+  stats                 Json? // { filesReviewed, comments, inputTokens, outputTokens, totalTokens, elapsed, toolCalls }
+  error                 String?
+  startedAt             DateTime?         @map("started_at")
+  finishedAt            DateTime?         @map("finished_at")
+  createdBy             String?           @map("created_by")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  deletedAt             DateTime?         @map("deleted_at")
+
+  repo     ReviewRepo         @relation(fields: [repoId], references: [id])
+  model    ReviewModel?       @relation(fields: [modelId], references: [id])
+  findings ReviewFinding[]
+  calls    ReviewTraceCall[]
+  notifs   ReviewNotif[]
+
+  @@index([repoId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("review_task")
+}
+
+model ReviewFinding {
+  id               String              @id @default(uuid())
+  taskId           String              @map("task_id")
+  path             String // 文件路径
+  startLine        Int                 @map("start_line")
+  endLine          Int                 @map("end_line")
+  content          String // 评审内容（markdown）
+  thinking         String? // AI 思维链（评论级）
+  category         String              @default("other") // bug|security|performance|maintainability|test|style|documentation|other
+  severity         String              @default("medium") // critical|high|medium|low
+  suggestionCode   String?             @map("suggestion_code") // 修复建议代码
+  existingCode     String?             @map("existing_code") // 现状代码
+  fingerprint      String // sha256(path|category|归一化content)
+  status           ReviewFindingStatus @default(OPEN)
+  isNew            Boolean             @default(true) @map("is_new") // 相对上一次评审是否新增
+  firstSeenTaskId  String?             @map("first_seen_task_id")
+  lastSeenTaskId   String?             @map("last_seen_task_id")
+  resolvedAt       DateTime?           @map("resolved_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  deletedAt        DateTime?           @map("deleted_at")
+
+  task ReviewTask @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+  @@index([fingerprint])
+  @@index([status])
+  @@map("review_finding")
+}
+
+// LLM 调用索引：raw 本体留在任务 HOME 的 JSONL，按 offset/len 按需读取回放
+model ReviewTraceCall {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  seq        Int // 任务内序号（从 1 开始）
+  requestNo  Int?     @map("request_no")
+  taskType   String?  @map("task_type") // MAIN_TASK | PLAN_TASK | RE_LOCATION_TASK | REVIEW_FILTER_TASK...
+  filePath   String?  @map("file_path")
+  model      String?
+  durationMs Int      @default(0) @map("duration_ms")
+  statusCode Int?     @map("status_code")
+  tokensIn   Int?     @map("tokens_in")
+  tokensOut  Int?     @map("tokens_out")
+  rawPath    String   @map("raw_path") // JSONL 绝对路径
+  rawOffset  Int      @map("raw_offset") // 行起始字节
+  rawLen     Int      @map("raw_len") // 行字节数
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task ReviewTask @relation(fields: [taskId], references: [id])
+
+  @@unique([taskId, seq])
+  @@index([taskId])
+  @@map("review_trace_call")
+}
+
+model ReviewGateRule {
+  id          String   @id @default(uuid())
+  repoId      String?  @map("repo_id") // 空 = 全局默认
+  maxCritical Int?     @map("max_critical") // critical 数上限，空 = 不限制
+  maxHigh     Int?     @map("max_high") // high 数上限，空 = 不限制
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  repo ReviewRepo? @relation(fields: [repoId], references: [id])
+
+  @@index([repoId])
+  @@map("review_gate_rule")
+}
+
+model ReviewNotif {
+  id        String          @id @default(uuid())
+  userId    String?         @map("user_id") // 空 = 全员
+  type      ReviewNotifType
+  taskId    String?         @map("task_id")
+  title     String
+  content   String?
+  isRead    Boolean         @default(false) @map("is_read")
+  readAt    DateTime?       @map("read_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  task ReviewTask? @relation(fields: [taskId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("review_notif")
+}

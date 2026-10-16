@@ -19,6 +19,7 @@ interface PermSeed {
   path?: string;
   icon?: string;
   sort?: number;
+  isHidden?: boolean; // 隐藏菜单：路由注册但不进侧栏（详情页）
 }
 
 const PERMISSION_TREE: PermSeed[] = [
@@ -29,7 +30,7 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.DIR,
     path: '/system',
     icon: 'ri:settings-3-line',
-    sort: 100,
+    sort: 900,
   },
   {
     name: '用户管理',
@@ -177,6 +178,180 @@ const PERMISSION_TREE: PermSeed[] = [
     type: PermType.BUTTON,
     parentCode: PermissionCode.SystemDeptMenu,
   },
+  // ---------- 代码评审（NestReview） ----------
+  {
+    name: '代码评审',
+    code: PermissionCode.ReviewMenu,
+    type: PermType.DIR,
+    path: '/review',
+    icon: 'ri:file-search-line',
+    sort: 100,
+  },
+  {
+    name: '评审工作台',
+    code: PermissionCode.ReviewDashboardMenu,
+    type: PermType.MENU,
+    parentCode: PermissionCode.ReviewMenu,
+    path: '/review/dashboard',
+    sort: 1,
+  },
+  {
+    name: '工作台查询',
+    code: PermissionCode.ReviewDashboardQuery,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewDashboardMenu,
+  },
+  {
+    name: '评审任务',
+    code: PermissionCode.ReviewTaskMenu,
+    type: PermType.MENU,
+    parentCode: PermissionCode.ReviewMenu,
+    path: '/review/task',
+    sort: 2,
+  },
+  {
+    // 任务详情挂在 /review 下（与 task 平级）而非 task 的子节点：
+    // 作为 task 的子路由需要 task/index.vue 提供 <router-view>，列表页没有 → 详情页渲染不出
+    name: '任务详情',
+    code: PermissionCode.ReviewTaskDetail,
+    type: PermType.MENU,
+    parentCode: PermissionCode.ReviewMenu,
+    path: '/review/task/detail',
+    sort: 99,
+    isHidden: true,
+  },
+  {
+    name: '任务查询',
+    code: PermissionCode.ReviewTaskList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewTaskMenu,
+  },
+  {
+    name: '发起评审',
+    code: PermissionCode.ReviewTaskCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewTaskMenu,
+  },
+  {
+    name: '取消任务',
+    code: PermissionCode.ReviewTaskCancel,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewTaskMenu,
+  },
+  {
+    name: '重跑任务',
+    code: PermissionCode.ReviewTaskRerun,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewTaskMenu,
+  },
+  {
+    name: '回写 MR',
+    code: PermissionCode.ReviewTaskPublish,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewTaskMenu,
+  },
+  {
+    name: '发现处理',
+    code: PermissionCode.ReviewFindingUpdate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewTaskMenu,
+  },
+  {
+    name: '仓库管理',
+    code: PermissionCode.ReviewRepoMenu,
+    type: PermType.MENU,
+    parentCode: PermissionCode.ReviewMenu,
+    path: '/review/repo',
+    sort: 3,
+  },
+  {
+    name: '仓库查询',
+    code: PermissionCode.ReviewRepoList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewRepoMenu,
+  },
+  {
+    name: '仓库新增',
+    code: PermissionCode.ReviewRepoCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewRepoMenu,
+  },
+  {
+    name: '仓库修改',
+    code: PermissionCode.ReviewRepoEdit,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewRepoMenu,
+  },
+  {
+    name: '仓库删除',
+    code: PermissionCode.ReviewRepoDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewRepoMenu,
+  },
+  {
+    name: '仓库同步',
+    code: PermissionCode.ReviewRepoSync,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewRepoMenu,
+  },
+  {
+    name: '模型配置',
+    code: PermissionCode.ReviewModelMenu,
+    type: PermType.MENU,
+    parentCode: PermissionCode.ReviewMenu,
+    path: '/review/model',
+    sort: 4,
+  },
+  {
+    name: '模型查询',
+    code: PermissionCode.ReviewModelList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewModelMenu,
+  },
+  {
+    name: '模型新增',
+    code: PermissionCode.ReviewModelCreate,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewModelMenu,
+  },
+  {
+    name: '模型修改',
+    code: PermissionCode.ReviewModelEdit,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewModelMenu,
+  },
+  {
+    name: '模型删除',
+    code: PermissionCode.ReviewModelDelete,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewModelMenu,
+  },
+  {
+    name: '模型测连',
+    code: PermissionCode.ReviewModelTest,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewModelMenu,
+  },
+  {
+    name: '质量红线',
+    code: PermissionCode.ReviewGateMenu,
+    type: PermType.MENU,
+    parentCode: PermissionCode.ReviewMenu,
+    path: '/review/gate',
+    sort: 5,
+  },
+  {
+    name: '红线查询',
+    code: PermissionCode.ReviewGateList,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewGateMenu,
+  },
+  {
+    name: '红线配置',
+    code: PermissionCode.ReviewGateEdit,
+    type: PermType.BUTTON,
+    parentCode: PermissionCode.ReviewGateMenu,
+  },
 ];
 
 async function seedPermissions(): Promise<Map<string, string>> {
@@ -201,6 +376,7 @@ async function seedPermissions(): Promise<Map<string, string>> {
         // ?? null：Prisma 会跳过 undefined，显式 null 才能清掉旧库里残留的图标
         icon: node.icon ?? null,
         sort: node.sort ?? 0,
+        isHidden: node.isHidden ?? false,
       },
       create: {
         name: node.name,
@@ -209,6 +385,7 @@ async function seedPermissions(): Promise<Map<string, string>> {
         path: node.path,
         icon: node.icon ?? null,
         sort: node.sort ?? 0,
+        isHidden: node.isHidden ?? false,
       },
     });
     codeToId.set(node.code, saved.id);
@@ -271,6 +448,19 @@ async function seedRoles(allPermIds: string[]): Promise<void> {
     PermissionCode.SystemRoleList,
     PermissionCode.SystemPermissionList,
     PermissionCode.SystemDeptList,
+    // 代码评审只读（菜单可见 + 查询/详情；隐藏详情页靠 isHidden 不进侧栏，但路由可达）
+    PermissionCode.ReviewMenu,
+    PermissionCode.ReviewDashboardMenu,
+    PermissionCode.ReviewTaskMenu,
+    PermissionCode.ReviewTaskDetail,
+    PermissionCode.ReviewRepoMenu,
+    PermissionCode.ReviewModelMenu,
+    PermissionCode.ReviewGateMenu,
+    PermissionCode.ReviewDashboardQuery,
+    PermissionCode.ReviewTaskList,
+    PermissionCode.ReviewRepoList,
+    PermissionCode.ReviewModelList,
+    PermissionCode.ReviewGateList,
   ];
   const commonPerms = await prisma.sysPermission.findMany({
     where: { code: { in: commonPermCodes } },

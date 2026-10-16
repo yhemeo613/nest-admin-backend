@@ -21,7 +21,15 @@
 </template>
 
 <script setup lang="ts">
+  import { onBeforeUnmount, onMounted } from 'vue'
+  import { useNoticeStore } from '@/store/modules/notice'
+
   defineOptions({ name: 'AppLayout' })
+
+  // 登录后初始化评审通知（SSE + 未读数）；退出登录时断开
+  const noticeStore = useNoticeStore()
+  onMounted(() => void noticeStore.init())
+  onBeforeUnmount(() => noticeStore.destroy())
 </script>
 
 <style lang="scss" scoped>

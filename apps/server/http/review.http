@@ -1,0 +1,239 @@
+@host = http://localhost:3000/api/v1
+# 登录后把返回的 accessToken 填到这里（见 auth.http），后续请求自动复用
+@accessToken = paste-your-access-token-here
+@modelId = paste-model-id-here
+@repoId = paste-repo-id-here
+@gateId = paste-gate-id-here
+
+# ==================== 模型配置 ====================
+
+### 新增模型配置
+# @name createModel
+POST {{host}}/review/models
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "MiMo Flash",
+  "provider": "openai",
+  "protocol": "openai",
+  "baseUrl": "https://api.example.com/v1",
+  "apiKey": "sk-your-key",
+  "model": "mimo-v2.5-flash",
+  "extraBody": { "thinking": { "type": "enabled" } },
+  "isDefault": true
+}
+
+### 模型列表
+GET {{host}}/review/models?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### 修改模型（apiKey 留空则不变）
+PUT {{host}}/review/models/{{modelId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "MiMo Flash（生产）",
+  "isDefault": true
+}
+
+### 连通性测试（已保存配置）
+POST {{host}}/review/models/{{modelId}}/test
+Authorization: Bearer {{accessToken}}
+
+### 连通性测试（表单草稿，不落库）
+POST {{host}}/review/models/test
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "草稿",
+  "provider": "openai",
+  "protocol": "openai",
+  "baseUrl": "https://api.example.com/v1",
+  "apiKey": "sk-your-key",
+  "model": "mimo-v2.5-flash"
+}
+
+### 删除模型
+DELETE {{host}}/review/models/{{modelId}}
+Authorization: Bearer {{accessToken}}
+
+# ==================== 仓库管理 ====================
+
+### 登记仓库
+# @name createRepo
+POST {{host}}/review/repos
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "NestPerm",
+  "platform": "GITLAB",
+  "gitUrl": "https://gitlab.example.com/group/nestperm.git",
+  "defaultBranch": "master",
+  "credential": "oauth2:glpat-your-token"
+}
+
+### 仓库列表
+GET {{host}}/review/repos?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### 修改仓库（credential 留空不变，"-" 清除）
+PUT {{host}}/review/repos/{{repoId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "defaultBranch": "main"
+}
+
+### 同步工作区（clone/fetch）
+POST {{host}}/review/repos/{{repoId}}/sync
+Authorization: Bearer {{accessToken}}
+
+### 删除仓库（同时清理工作区）
+DELETE {{host}}/review/repos/{{repoId}}
+Authorization: Bearer {{accessToken}}
+
+# ==================== 质量红线 ====================
+
+### 新增全局红线（repoId 缺省）
+# @name createGate
+POST {{host}}/review/gates
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "maxCritical": 0,
+  "maxHigh": 5
+}
+
+### 新增仓库级红线（覆盖全局）
+POST {{host}}/review/gates
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "repoId": "{{repoId}}",
+  "maxCritical": 0,
+  "maxHigh": 2
+}
+
+### 红线列表
+GET {{host}}/review/gates
+Authorization: Bearer {{accessToken}}
+
+### 修改红线（null = 清除限制）
+PUT {{host}}/review/gates/{{gateId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "maxHigh": 3
+}
+
+### 删除红线
+DELETE {{host}}/review/gates/{{gateId}}
+Authorization: Bearer {{accessToken}}
+
+# ==================== 评审任务 ====================
+
+### 创建任务（分支区间）
+# @name createTask
+POST {{host}}/review/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "repoId": "{{repoId}}",
+  "mode": "RANGE",
+  "fromRef": "main",
+  "toRef": "feature-x",
+  "requirementBackground": "本次需求：权限模块重构"
+}
+
+### 创建任务（MR 模式，完成后自动回写）
+POST {{host}}/review/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "repoId": "{{repoId}}",
+  "mode": "MR",
+  "mrUrl": "https://gitlab.example.com/group/repo/-/merge_requests/123"
+}
+
+### 任务列表
+GET {{host}}/review/tasks?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### 任务详情
+GET {{host}}/review/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+
+### 取消任务
+POST {{host}}/review/tasks/{{taskId}}/cancel
+Authorization: Bearer {{accessToken}}
+
+### 重跑任务
+POST {{host}}/review/tasks/{{taskId}}/rerun
+Authorization: Bearer {{accessToken}}
+
+### 触发/重试 MR 回写
+POST {{host}}/review/tasks/{{taskId}}/publish
+Authorization: Bearer {{accessToken}}
+
+### 任务 diff（text/plain）
+GET {{host}}/review/tasks/{{taskId}}/diff
+Authorization: Bearer {{accessToken}}
+
+### 发现列表（筛选：severity/category/status/isNew）
+GET {{host}}/review/tasks/{{taskId}}/findings?severity=critical&isNew=true
+Authorization: Bearer {{accessToken}}
+
+### 发现状态流转
+PATCH {{host}}/review/findings/{{findingId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "status": "FIXED" }
+
+### 执行轨迹索引
+GET {{host}}/review/tasks/{{taskId}}/trace/calls
+Authorization: Bearer {{accessToken}}
+
+### 单次调用完整记录（思维链）
+GET {{host}}/review/tasks/{{taskId}}/trace/call/1
+Authorization: Bearer {{accessToken}}
+
+### 覆盖率 manifest
+GET {{host}}/review/tasks/{{taskId}}/manifest
+Authorization: Bearer {{accessToken}}
+
+### 红线结论（供 CI 查询）
+GET {{host}}/review/tasks/{{taskId}}/gate
+Authorization: Bearer {{accessToken}}
+
+### 任务实时事件流（SSE；EventSource 不支持 header，可用 fetch-SSE）
+GET {{host}}/review/tasks/{{taskId}}/events
+Authorization: Bearer {{accessToken}}
+
+# ==================== 工作台 / 通知 ====================
+
+### 工作台统计
+GET {{host}}/review/dashboard/stats
+Authorization: Bearer {{accessToken}}
+
+### 通知列表
+GET {{host}}/review/notifications?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### 未读数
+GET {{host}}/review/notifications/unread-count
+Authorization: Bearer {{accessToken}}
+
+### 全部已读
+PATCH {{host}}/review/notifications/read-all
+Authorization: Bearer {{accessToken}}

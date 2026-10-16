@@ -33,6 +33,38 @@ export const PermissionCode = {
   SystemDeptCreate: 'system:dept:create',
   SystemDeptUpdate: 'system:dept:update',
   SystemDeptDelete: 'system:dept:delete',
+  // 代码评审（NestReview）- 菜单级
+  ReviewMenu: 'review',
+  ReviewDashboardMenu: 'review:dashboard',
+  ReviewTaskMenu: 'review:task',
+  ReviewRepoMenu: 'review:repo',
+  ReviewModelMenu: 'review:model',
+  ReviewGateMenu: 'review:gate',
+  // 代码评审 - 工作台
+  ReviewDashboardQuery: 'review:dashboard:query',
+  // 代码评审 - 任务
+  ReviewTaskList: 'review:task:list',
+  ReviewTaskDetail: 'review:task:detail',
+  ReviewTaskCreate: 'review:task:create',
+  ReviewTaskCancel: 'review:task:cancel',
+  ReviewTaskRerun: 'review:task:rerun',
+  ReviewTaskPublish: 'review:task:publish',
+  ReviewFindingUpdate: 'review:finding:update',
+  // 代码评审 - 仓库
+  ReviewRepoList: 'review:repo:list',
+  ReviewRepoCreate: 'review:repo:create',
+  ReviewRepoEdit: 'review:repo:edit',
+  ReviewRepoDelete: 'review:repo:delete',
+  ReviewRepoSync: 'review:repo:sync',
+  // 代码评审 - 模型配置
+  ReviewModelList: 'review:model:list',
+  ReviewModelCreate: 'review:model:create',
+  ReviewModelEdit: 'review:model:edit',
+  ReviewModelDelete: 'review:model:delete',
+  ReviewModelTest: 'review:model:test',
+  // 代码评审 - 质量红线
+  ReviewGateList: 'review:gate:list',
+  ReviewGateEdit: 'review:gate:edit',
 } as const;
 
 export type PermissionCodeValue = (typeof PermissionCode)[keyof typeof PermissionCode];
